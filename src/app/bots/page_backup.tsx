@@ -4,8 +4,21 @@ import { useState } from 'react'
 import { Plus, Bot, Edit, Trash2, MessageSquare, Users, Calendar } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
+// 定义Bot类型
+interface BotType {
+  bot_id: string
+  name: string
+  persona_description: string
+  system_prompt_template: string
+  created_at: string
+  updated_at: string
+  status: 'active' | 'inactive'
+  totalChats: number
+  activeUsers: number
+}
+
 // 模拟数据
-const mockBots = [
+const mockBots: BotType[] = [
   {
     bot_id: '1',
     name: '客服机器人',
@@ -42,7 +55,7 @@ const mockBots = [
 ]
 
 export default function BotsPage() {
-  const [bots, setBots] = useState(mockBots)
+  const bots = mockBots
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   return (

@@ -61,20 +61,20 @@ const mockTags = [
 ]
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(mockUsers)
-  const [tags, setTags] = useState(mockTags)
+  const users = mockUsers
+  const tags = mockTags
+  const [searchTerm, setSearchTerm] = useState('')
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [showCreateTagModal, setShowCreateTagModal] = useState(false)
   const [selectedTag, setSelectedTag] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('users')
 
   const filteredUsers = users.filter(user => {
     const tagMatch = selectedTag === 'all' || user.tags.includes(selectedTag)
-    const searchMatch = searchQuery === '' || 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.external_user_id.toLowerCase().includes(searchQuery.toLowerCase())
+    const searchMatch = searchTerm === '' || 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.external_user_id.toLowerCase().includes(searchTerm.toLowerCase())
     return tagMatch && searchMatch
   })
 
@@ -200,8 +200,8 @@ export default function UsersPage() {
                   <input
                     type="text"
                     placeholder="搜索用户..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   />
                 </div>

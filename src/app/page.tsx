@@ -1,38 +1,78 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Eye, EyeOff, Bot, Lock, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { loginUser, setCurrentUser } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   })
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getFirstAllowedPage = useCallback((role: string): string => {
+    const permissions: Record<string, string[]> = {
+      'viewer': ['/users'],
+      'operator': ['/users', '/topics', '/knowledge'],
+      'admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings'],
+      'super_admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings']
+    }
+    const allowedPages = permissions[role] || []
+    const result = allowedPages[0] || '/users'
+    return result
+  }, [])
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
     
-    // 模拟登录请求
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 这里应该是真实的登录逻辑
-    // 暂时直接跳转到仪表板
-    router.push('/dashboard')
-    setLoading(false)
-  }
+    try {
+      const userData = await loginUser(formData.username, formData.password)
+      
+      if (userData && userData.length > 0) {
+        const user = userData[0]
+        
+        // 保存用户信息到localStorage
+        setCurrentUser({
+          user_id: user.user_id,
+          username: user.username,
+          role: user.role,
+          email: user.email,
+          password_hash: '' // 不保存密码哈希
+        })
+        
+        // 根据用户角色跳转到对应页面
+        const targetPage = getFirstAllowedPage(user.role)
+        router.push(targetPage)
+      } else {
+        setError('用户名或密码错误')
+      }
+    } catch {
+      setError('登录失败，请检查用户名和密码')
+    } finally {
+      setLoading(false)
+    }
+  }, [formData.username, formData.password, getFirstAllowedPage, router])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
     }))
-  }
+    // 清除错误信息
+    if (error) setError('')
+  }, [error])
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors duration-150">
@@ -42,12 +82,18 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mb-4">
             <Bot className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">后台管理</h1>
         </div>
 
         {/* 登录表单 */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 transition-colors duration-150">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 错误信息 */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             {/* 用户名输入 */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -87,26 +133,12 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={togglePasswordVisibility}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-150"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-            </div>
-
-            {/* 记住密码和忘记密码 */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700"
-                />
-                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">记住密码</span>
-              </label>
-              <a href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-150">
-                忘记密码？
-              </a>
             </div>
 
             {/* 登录按钮 */}

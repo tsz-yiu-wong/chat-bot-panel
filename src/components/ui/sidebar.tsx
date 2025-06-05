@@ -18,15 +18,16 @@ import {
   Hash
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import type { AdminUser } from '@/lib/supabase'
 
-const navigation = [
-  { name: '仪表板', href: '/dashboard', icon: LayoutDashboard },
-  { name: '机器人', href: '/bots', icon: Bot },
-  { name: '提示词', href: '/prompts', icon: MessageSquare },
-  { name: '知识库', href: '/knowledge', icon: BookOpen },
-  { name: '话题库', href: '/topics', icon: Hash },
-  { name: '用户', href: '/users', icon: Users },
-  { name: '设置', href: '/settings', icon: Settings },
+const allNavigation = [
+  { name: '仪表板', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'super_admin'] },
+  { name: '机器人', href: '/bots', icon: Bot, roles: ['admin', 'super_admin'] },
+  { name: '提示词', href: '/prompts', icon: MessageSquare, roles: ['admin', 'super_admin'] },
+  { name: '知识库', href: '/knowledge', icon: BookOpen, roles: ['operator', 'admin', 'super_admin'] },
+  { name: '话题库', href: '/topics', icon: Hash, roles: ['operator', 'admin', 'super_admin'] },
+  { name: '用户', href: '/users', icon: Users, roles: ['viewer', 'operator', 'admin', 'super_admin'] },
+  { name: '设置', href: '/settings', icon: Settings, roles: ['admin', 'super_admin'] },
 ]
 
 const themes = [
@@ -35,11 +36,20 @@ const themes = [
   { name: 'system', icon: SunMoon, label: '跟随系统' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  user?: AdminUser | null
+}
+
+export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>('system')
   const [mounted, setMounted] = useState(false)
+
+  // 根据用户权限过滤导航菜单
+  const navigation = allNavigation.filter(item => 
+    user && item.roles.includes(user.role)
+  )
 
   // 初始化
   useEffect(() => {

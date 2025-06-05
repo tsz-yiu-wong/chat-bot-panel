@@ -1,6 +1,6 @@
 'use client'
 
-import { Settings, Bell, Shield, Database, Palette } from 'lucide-react'
+import { Bell, Shield, Database, Palette } from 'lucide-react'
 
 export default function SettingsPage() {
   return (

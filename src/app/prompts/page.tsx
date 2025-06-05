@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, MessageSquare, Edit, Trash2, Bot, Tag, Calendar, Filter } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus, Edit, Trash2, Bot, Tag, Filter } from 'lucide-react'
 
 // 模拟数据
 const mockPrompts = [
@@ -68,7 +67,7 @@ const stageOptions = [
 ]
 
 export default function PromptsPage() {
-  const [prompts, setPrompts] = useState(mockPrompts)
+  const prompts = mockPrompts
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedStage, setSelectedStage] = useState('all')
   const [selectedModel, setSelectedModel] = useState('all')

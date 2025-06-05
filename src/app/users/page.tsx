@@ -2,6 +2,6 @@
 
 import ComingSoon from '@/components/ui/coming-soon'
 
-export default function KnowledgePage() {
+export default function UsersPage() {
   return <ComingSoon />
 } 
