@@ -23,7 +23,7 @@ import type { AdminUser } from '@/lib/supabase'
 const allNavigation = [
   { name: '仪表板', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'super_admin'] },
   { name: '机器人', href: '/bots', icon: Bot, roles: ['admin', 'super_admin'] },
-  { name: '提示词', href: '/prompts', icon: MessageSquare, roles: ['admin', 'super_admin'] },
+  { name: 'prompts', href: '/prompts', icon: MessageSquare, roles: ['admin', 'super_admin'] },
   { name: '知识库', href: '/knowledge', icon: BookOpen, roles: ['operator', 'admin', 'super_admin'] },
   { name: '话题库', href: '/topics', icon: Hash, roles: ['operator', 'admin', 'super_admin'] },
   { name: '用户', href: '/users', icon: Users, roles: ['viewer', 'operator', 'admin', 'super_admin'] },
@@ -111,6 +111,7 @@ export function Sidebar({ user }: SidebarProps) {
 
   return (
     <div className={cn(
+      "h-screen", 
       "bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-150 flex flex-col",
       collapsed ? "w-16" : "w-36"
     )}>

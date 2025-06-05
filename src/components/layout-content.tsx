@@ -32,11 +32,11 @@ function LayoutWithAuth({ children }: { children: React.ReactNode }) {
 
   // 渲染完整布局
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar user={user} />
       <div className="flex-1 flex flex-col">
         <Header user={user} />
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

@@ -92,7 +92,7 @@ export default function PromptsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">提示词管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">提示词管理</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">管理不同阶段和场景的提示词模板</p>
         </div>
         <button
