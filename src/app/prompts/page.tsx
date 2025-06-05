@@ -11,7 +11,7 @@ const mockPrompts = [
     model_name: 'qwen3-32B',
     stage_name: 'first_meet',
     prompt_text_template: {
-      chinese: '你好！很高兴认识你。我叫{{bot_name}}，请问怎么称呼你呢？',
+      chinese: '你好！我叫{{bot_name}}，请问怎么称呼你呢？',
       vietnamese: 'Xin chào! Rất vui được làm quen với bạn. Tôi tên là {{bot_name}}, tôi có thể gọi bạn là gì?'
     },
     conditions: { user_tags: ['new_user'] },
