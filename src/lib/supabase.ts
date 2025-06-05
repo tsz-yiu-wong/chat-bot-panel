@@ -1,14 +1,15 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 // 检查Supabase配置
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// 初始化Supabase客户端（如果配置存在）
-let supabase: SupabaseClient | null = null
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey)
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables')
 }
+
+// 初始化Supabase客户端
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Database Types
 export interface AdminUser {
