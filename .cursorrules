@@ -1,0 +1,161 @@
+# Cursor Rule: Chatbot Backend Management System
+
+## 1. Project Goal
+
+Build a powerful Chatbot backend management system that supports multiple bots, user tags, multi-stage prompts, and integrates RAG functionality to enhance response quality.
+
+
+## 2. Core Features
+
+* **Bot Management**
+  * Create and manage bots with distinct personas.
+  * Each bot can have detailed background information, interests, profile photos, travel pictures, and other media.
+  * Configure individual system prompts and behavioral styles per bot.
+
+* **User Management**
+  * Display all chat users with real-time updates based on conversation content.
+  * Automatically assign dynamic tags to users (e.g., sentiment, preferences).
+  * Store plaintext chat history per user for analytics and personalization purposes.
+
+* **Prompt Management**
+  * Configure prompts based on conversation stages (e.g., greeting, inquiry, clarification, closing).
+  * Manage prompts specific to different base models or fine-tuned variants.
+  * Associate prompts with both bot personas and user tags.
+
+* **Knowledge Base Management**
+  * Organize and maintain various domain-specific or persona-specific knowledge bases.
+  * Make knowledge bases available for bots to reference during conversations.
+
+* **Topic Library**
+  * Manage a set of predefined conversation topics that bots can proactively initiate.
+  * Topics can be tagged by interest area, context, or user persona suitability.
+
+* **Chat History Storage**
+  * Persist all plaintext conversations between users and bots within User Management for transparency and analysis.
+  * Store vectorized chat history separately (not displayed in UI) for Retrieval-Augmented Generation (RAG).
+  * Use vectorized data to retrieve relevant past interactions, improving response coherence and personalization.
+
+
+
+## 3. Technology Stack
+
+*   **Frontend (Admin Panel)**: Vercel (e.g., Next.js, React, Vue)
+*   **Backend API**: Vercel (e.g., Next.js API routes, or other Serverless Functions like Python/Node.js) / or deployed on the same GPU server as the LLM service
+*   **Database**: Supabase (PostgreSQL)
+*   **Vector Storage**: Supabase `pgvector` extension (for RAG)
+*   **Large Language Model (LLM)**: Deployed on a separate GPU cloud server (e.g., AWS EC2, GCP, Azure VM, RunPod, Vast.ai, etc.)
+
+
+
+## 4. System Architecture
+
+### 4.1. Overview
+
+The system is divided into the admin panel, user interaction interface (implied by chat functionality), core backend service, LLM service, and data storage.
+
+```
++--------------------+                  +-------------------------+                  +-----------------------------+
+|  User Chat         |   Request/Reply  |  Core Backend API       |   API Calls      |     LLM Service             |
+|  Interface         +----------------->|  (Vercel / GPU Server)  +<---------------->+  (GPU Cloud Server)         |
++--------------------+                  +-------------------------+                  +-----------------------------+
+                                                 |
+                                                 | DB Access
+                                                 v
+                                   +-------------------------------+
+                                   |           Supabase            |
+                                   |    (PostgreSQL + pgvector)    |
+                                   |-------------------------------|
+                                   | - User Data (Tags)            |
+                                   | - Bot Personas                |
+                                   | - Prompt Library              |
+                                   | - Chat History (Raw + Vector) |
+                                   +-------------------------------+
+
++----------------------+           +-------------------------+
+|  Admin Frontend      |  Calls    | Admin Backend API       |
+|  (Vercel)            +---------->| (Vercel / GPU Server)   |
++----------------------+           +-----------+-------------+
+                                               |
+                                               v
+                                         +-----------+
+                                         | Supabase  |
+                                         +-----------+
+
+```
+
+### 4.2. Component Description
+
+*   **Admin Frontend (Vercel)**:
+    *   Provides a graphical interface for administrators to configure bot personas, user tags, stage-specific prompts, etc.
+*   **Core Backend API (Vercel / GPU Server)**:
+    *   Handles requests from the user chat interface.
+    *   Handles CRUD requests from the admin panel.
+    *   Implements chat logic: user identification, persona loading, tag retrieval, stage determination, prompt selection.
+    *   Implements RAG logic: querying the vector database, constructing enhanced prompts.
+    *   Calls the LLM service.
+    *   Records chat history.
+*   **LLM Service (GPU Cloud Server)**:
+    *   Hosts the large language model.
+    *   Provides an API interface for the core backend to call, receiving prompts and returning model-generated text.
+*   **Database (Supabase)**:
+    *   **PostgreSQL**: Stores structured data, such as bot configurations, user information, prompts, raw chat history, etc.
+    *   **pgvector**: Stores vector embeddings of chat history within PostgreSQL and supports efficient similarity search.
+
+
+## 5. UI Design Dos and Don'ts
+
+### ✅ Do's
+
+1. Use generous white space to create a clean layout.
+2. Maintain consistent spacing and padding throughout the design.
+3. Establish a clear typography hierarchy for better readability.
+4. Utilize subtle shadows and gradients to add depth.
+5. Ensure high contrast between text and background for accessibility.
+6. Limit your color palette to 2–3 main colors for cohesion.
+7. Use consistent iconography and imagery styles.
+8. Align elements properly to create a structured layout.
+9. Implement responsive design principles for various devices.
+10. Use clear and concise language in UI text.
+11. Provide immediate feedback for user interactions.
+12. Design intuitive navigation structures.
+13. Ensure buttons and interactive elements are easily tappable.
+14. Use visual cues to guide users through tasks.
+15. Test designs with real users to gather feedback.
+16. Optimize loading times for better user experience.
+17. Use animations sparingly to enhance interactions.
+18. Prioritize content based on user needs.
+19. Ensure forms are simple and straightforward.
+20. Use tooltips and help texts to assist users.
+21. Design error messages that are helpful and non-technical.
+22. Maintain visual consistency across all screens.
+23. Use real data in design mockups for accuracy.
+24. Incorporate accessibility features like keyboard navigation.
+25. Stay updated with current design trends and best practices.
+
+### ❌ Don'ts
+
+26. Avoid cluttering the interface with too many elements.
+27. Don't use too many different fonts or font sizes.
+28. Avoid low contrast between text and background.
+29. Don't rely solely on color to convey information.
+30. Avoid using generic or unclear icons.
+31. Don't use animations that are too fast or too slow.
+32. Avoid inconsistent spacing and alignment.
+33. Don't use jargon or technical terms in UI text.
+34. Avoid long forms that overwhelm users.
+35. Don't neglect mobile optimization.
+36. Avoid using placeholder text as a substitute for labels.
+37. Don't use pop-ups that interrupt user tasks.
+38. Avoid auto-playing media without user consent.
+39. Don't make buttons too small or too close together.
+40. Avoid using too many colors that can confuse users.
+41. Don't ignore user feedback and testing results.
+42. Avoid inconsistent iconography across the app.
+43. Don't use outdated design patterns.
+44. Avoid hiding important information behind hover actions.
+45. Don't use default browser styles without customization.
+46. Avoid using images that don't add value to the content.
+47. Don't neglect the importance of micro-interactions.
+48. Avoid hard-to-read text due to poor font choices.
+49. Don't make users guess what actions to take next.
+50. Avoid neglecting the visual hierarchy of elements.
