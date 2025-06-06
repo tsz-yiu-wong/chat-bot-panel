@@ -31,8 +31,8 @@ export function Header({ user }: HeaderProps) {
   }
 
   return (
-    <div className="sticky top-0 z-10 bg-white dark:bg-gray-800">
-      <header className="h-16 px-4 flex items-center border-b border-gray-200 dark:border-gray-700 transition-colors duration-150">
+    <div className="sticky top-0 z-10 bg-white dark:bg-[var(--component-background)]">
+      <header className="h-16 px-4 flex items-center border-b border-gray-200 dark:border-[var(--border-color)] transition-colors duration-150">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-4 ml-auto">
             <div className="relative">
@@ -55,8 +55,8 @@ export function Header({ user }: HeaderProps) {
 
               {/* 用户菜单 */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[var(--component-background)] rounded-lg shadow-lg border border-gray-200 dark:border-[var(--border-color)] py-1 z-50">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-[var(--border-color)]">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {user?.username}
                     </p>

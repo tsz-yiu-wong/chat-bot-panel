@@ -112,10 +112,10 @@ export function Sidebar({ user }: SidebarProps) {
   return (
     <div className={cn(
       "h-screen", 
-      "bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-150 flex flex-col",
+      "bg-white dark:bg-[var(--component-background)] border-r border-gray-200 dark:border-[var(--border-color)] transition-all duration-150 flex flex-col",
       collapsed ? "w-16" : "w-36"
     )}>
-      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700 transition-colors duration-150">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-[var(--border-color)] transition-colors duration-150">
         {!collapsed && (
           <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap overflow-hidden">后台管理</h1>
         )}
@@ -136,10 +136,10 @@ export function Sidebar({ user }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150",
+                    "group flex items-center px-3 py-2 text-sm rounded-lg transition-colors duration-150",
                     isActive
-                      ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                      ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 font-semibold"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium"
                   )}
                 >
                   <item.icon
@@ -163,7 +163,7 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* 主题切换 */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 transition-colors duration-150">
+      <div className="p-3 border-t border-gray-200 dark:border-[var(--border-color)] transition-colors duration-150">
         <div className="flex items-center justify-center">
           <div className="flex items-center space-x-1">
             {mounted && themes.map((theme) => (

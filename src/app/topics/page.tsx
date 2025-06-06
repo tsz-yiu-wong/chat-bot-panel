@@ -453,13 +453,13 @@ export default function TopicsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="搜索话题内容..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
           />
         </div>
         
         {/* 搜索结果 */}
         {searchResults.length > 0 && (
-          <div className="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          <div className="mt-2 bg-white dark:bg-[var(--component-background)] border border-gray-200 dark:border-[var(--border-color)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
             {searchResults.map((topic) => {
               const category = categories.find(c => c.id === topic.category_id)
               const subcategory = category?.subcategories.find(s => s.id === topic.subcategory_id)
@@ -467,7 +467,7 @@ export default function TopicsPage() {
                 <button
                   key={topic.id}
                   onClick={() => handleSearchResultClick(topic)}
-                  className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+                  className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] border-b border-gray-100 dark:border-[var(--border-color)] last:border-b-0"
                 >
                   <div className="text-sm text-gray-900 dark:text-gray-100">{topic.content}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -481,15 +481,15 @@ export default function TopicsPage() {
       </div>
 
       {/* 分类树 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)]">
+        <div className="p-4 border-b border-gray-200 dark:border-[var(--border-color)]">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">分类结构</h2>
         </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="divide-y divide-gray-200 dark:divide-[var(--border-color)]">
           {categories.map((category) => (
             <div key={category.id}>
               {/* 大类 */}
-              <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+              <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1">
                     <button
@@ -538,8 +538,8 @@ export default function TopicsPage() {
               {expandedCategories.has(category.id) && (
                 <>
                   {category.subcategories.map((subcategory) => (
-                    <div key={subcategory.id} className="ml-6 border-l border-gray-200 dark:border-gray-700">
-                      <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                    <div key={subcategory.id} className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)]">
+                      <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center flex-1">
                             <button
@@ -590,11 +590,11 @@ export default function TopicsPage() {
                             <div 
                               key={topic.id} 
                               id={`topic-${topic.id}`}
-                              className={`ml-6 border-l border-gray-200 dark:border-gray-700 ${
+                              className={`ml-6 border-l border-gray-200 dark:border-[var(--border-color)] ${
                                 highlightedTopicId === topic.id ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                               }`}
                             >
-                              <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                              <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center flex-1">
                                     <MessageSquare className="h-4 w-4 text-purple-500 ml-4" />
@@ -629,11 +629,11 @@ export default function TopicsPage() {
                           ))}
                           
                           {/* 添加话题按钮 */}
-                          <div className="ml-6 border-l border-gray-200 dark:border-gray-700 pb-6">
+                          <div className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)] pb-6">
                             <div className="pl-4 pt-3">
                               <button
                                 onClick={() => openCreateModal('topic', category.id, subcategory.id)}
-                                className="px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors duration-150 rounded"
+                                className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors duration-150 rounded"
                               >
                                 <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400">
                                   <Plus className="h-3 w-3 mr-1" />
@@ -648,11 +648,11 @@ export default function TopicsPage() {
                   ))}
                   
                   {/* 添加小类按钮 */}
-                  <div className="ml-6 border-l border-gray-200 dark:border-gray-700 pb-6">
+                  <div className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)] pb-6">
                     <div className="pl-4 pt-3">
                       <button
                         onClick={() => openCreateModal('subcategory', category.id)}
-                        className="px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-150 rounded"
+                        className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-150 rounded"
                       >
                         <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
                           <Plus className="h-3 w-3 mr-1" />
@@ -670,7 +670,7 @@ export default function TopicsPage() {
           <div className="m-4">
             <button
               onClick={() => openCreateModal('category')}
-              className="px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150 rounded"
+              className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150 rounded"
             >
               <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
                 <Plus className="h-3 w-3 mr-1" />
@@ -684,7 +684,7 @@ export default function TopicsPage() {
       {/* 创建模态框 */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {selectedLevel === 'category' && '新建大类'}
@@ -703,7 +703,7 @@ export default function TopicsPage() {
                         type="text"
                         value={formData.name_cn}
                         onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                         required
                       />
                     </div>
@@ -715,7 +715,7 @@ export default function TopicsPage() {
                         type="text"
                         value={formData.name_vn}
                         onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                         required
                       />
                     </div>
@@ -731,7 +731,7 @@ export default function TopicsPage() {
                       value={formData.content}
                       onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                       rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                       required
                     />
                   </div>
@@ -741,13 +741,13 @@ export default function TopicsPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
                   >
                     取消
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+                    className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
                   >
                     创建
                   </button>
@@ -761,7 +761,7 @@ export default function TopicsPage() {
       {/* 编辑模态框 */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {selectedLevel === 'category' && '编辑大类'}
@@ -780,7 +780,7 @@ export default function TopicsPage() {
                         type="text"
                         value={formData.name_cn}
                         onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                         required
                       />
                     </div>
@@ -792,7 +792,7 @@ export default function TopicsPage() {
                         type="text"
                         value={formData.name_vn}
                         onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                         required
                       />
                     </div>
@@ -808,7 +808,7 @@ export default function TopicsPage() {
                       value={formData.content}
                       onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                       rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                       required
                     />
                   </div>
@@ -822,7 +822,7 @@ export default function TopicsPage() {
                     type="number"
                     value={formData.sort_order}
                     onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
                   />
                 </div>
 
@@ -830,13 +830,13 @@ export default function TopicsPage() {
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
                   >
                     取消
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+                    className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
                   >
                     保存
                   </button>
@@ -850,7 +850,7 @@ export default function TopicsPage() {
       {/* 删除确认模态框 */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">确认删除</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -862,7 +862,7 @@ export default function TopicsPage() {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
                 >
                   取消
                 </button>

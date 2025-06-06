@@ -18,9 +18,9 @@ interface Prompt {
 }
 
 const stageOptions = [
-  { value: 'first_meet', label: '刚认识', color: 'purple' },
+  { value: 'first_meet', label: '处识', color: 'purple' },
   { value: 'learn_hobbies', label: '了解爱好', color: 'orange' },
-  { value: 'show_ability', label: '展示能力', color: 'cyan' },
+  { value: 'build_intimacy', label: '加深感情', color: 'cyan' },
   { value: 'romance', label: '恋爱', color: 'pink' }
 ]
 
@@ -212,7 +212,7 @@ export default function PromptsPage() {
       </div>
 
       {/* 筛选器 */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6">
         <div className="space-y-4">
           {/* 阶段筛选 */}
           <div className="flex items-center gap-4">
@@ -225,7 +225,7 @@ export default function PromptsPage() {
                 className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
                   selectedStage === 'all'
                     ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    : 'bg-white dark:bg-[var(--component-background)] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500'
                 }`}
               >
                 全部 ({prompts.length})
@@ -243,10 +243,10 @@ export default function PromptsPage() {
                           stage.color === 'cyan' ? 'bg-cyan-600 text-white border-cyan-600' :
                           stage.color === 'pink' ? 'bg-pink-600 text-white border-pink-600' :
                           'bg-gray-600 text-white border-gray-600'
-                        : stage.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30' :
-                          stage.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/30' :
-                          stage.color === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-900/30' :
-                          stage.color === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800 hover:bg-pink-100 dark:hover:bg-pink-900/30' :
+                        : stage.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-100 dark:border-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/30' :
+                          stage.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-100 dark:border-orange-900/40 hover:bg-orange-100 dark:hover:bg-orange-900/30' :
+                          stage.color === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-cyan-900/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/30' :
+                          stage.color === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border-pink-100 dark:border-pink-900/40 hover:bg-pink-100 dark:hover:bg-pink-900/30' :
                           'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -268,7 +268,7 @@ export default function PromptsPage() {
                 className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
                   selectedModel === 'all'
                     ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    : 'bg-white dark:bg-[var(--component-background)] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500'
                 }`}
               >
                 全部 ({prompts.length})
@@ -282,7 +282,7 @@ export default function PromptsPage() {
                     className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
                       selectedModel === model
                         ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+                        : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5">
@@ -313,30 +313,30 @@ export default function PromptsPage() {
           {filteredPrompts.map((prompt) => (
             <div 
               key={prompt.id} 
-              className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md"
+              className="group bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md"
             >
               {/* 头部信息 */}
               <div className="flex items-center justify-between p-6 pb-4">
-                <div className="flex items-center space-x-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[100%]">
                     {prompt.name}
                   </h3>
-                  <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
-                    getStageColor(prompt.stage_name) === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' :
-                    getStageColor(prompt.stage_name) === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800' :
-                    getStageColor(prompt.stage_name) === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800' :
-                    getStageColor(prompt.stage_name) === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800' :
+                  <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
+                    getStageColor(prompt.stage_name) === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-900/40' :
+                    getStageColor(prompt.stage_name) === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-100 dark:border-orange-900/40' :
+                    getStageColor(prompt.stage_name) === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border border-cyan-100 dark:border-cyan-900/40' :
+                    getStageColor(prompt.stage_name) === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border border-pink-100 dark:border-pink-900/40' :
                     'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
                   }`}>
                     {getStageLabel(prompt.stage_name)}
                   </span>
-                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                     <Bot className="w-3.5 h-3.5" />
                     <span className="font-mono font-medium">{prompt.model_name}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="flex items-center space-x-1 transition-opacity duration-200">
                   <button 
                     onClick={() => handleEditClick(prompt)}
                     className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -358,7 +358,7 @@ export default function PromptsPage() {
               <div className="px-6 pb-6 space-y-4">
                 {/* 中文版本 */}
                 <div>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border-l-3 border-blue-500">
+                  <div className="bg-gray-50 dark:bg-[var(--accent-background)] rounded-xl p-4 border-l-3 border-blue-500">
                     <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">
                       {prompt.prompt_cn}
                     </p>
@@ -367,7 +367,7 @@ export default function PromptsPage() {
 
                 {/* 越南文版本 */}
                 <div>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border-l-3 border-emerald-500">
+                  <div className="bg-gray-50 dark:bg-[var(--accent-background)] rounded-xl p-4 border-l-3 border-emerald-500">
                     <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">
                       {prompt.prompt_vn}
                     </p>
@@ -376,7 +376,7 @@ export default function PromptsPage() {
 
                 {/* 备注 */}
                 {prompt.mark && (
-                  <div className="flex items-start space-x-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-start space-x-3 pt-2 border-t border-gray-100 dark:border-[var(--border-color)]">
                     <div className="flex items-center h-6">
                       <Tag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                     </div>
@@ -505,7 +505,7 @@ export default function PromptsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-700"
+                  className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
                 >
                   创建
                 </button>
@@ -613,7 +613,7 @@ export default function PromptsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-700"
+                  className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
                 >
                   保存
                 </button>

@@ -24,7 +24,7 @@ function LayoutWithAuth({ children }: { children: React.ReactNode }) {
   // 正在加载中
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
@@ -32,7 +32,7 @@ function LayoutWithAuth({ children }: { children: React.ReactNode }) {
 
   // 渲染完整布局
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen">
       <Sidebar user={user} />
       <div className="flex-1 flex flex-col">
         <Header user={user} />
