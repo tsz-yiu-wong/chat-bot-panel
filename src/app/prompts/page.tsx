@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Bot, Tag } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Plus, Edit, Trash2, Bot, Tag, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // 类型定义
@@ -17,12 +17,282 @@ interface Prompt {
   updated_at: string
 }
 
+// 默认表单数据
+const DEFAULT_FORM_DATA = {
+  id: '',
+  name: '',
+  model_name: 'qwen3-32B',
+  stage_name: 'first_meet',
+  prompt_cn: '',
+  prompt_vn: '',
+  mark: ''
+}
+
+// 阶段配置
 const stageOptions = [
-  { value: 'first_meet', label: '处识', color: 'purple' },
+  { value: 'first_meet', label: '初识', color: 'purple' },
   { value: 'learn_hobbies', label: '了解爱好', color: 'orange' },
   { value: 'build_intimacy', label: '加深感情', color: 'cyan' },
   { value: 'romance', label: '恋爱', color: 'pink' }
 ]
+
+// 模型配置
+const modelOptions = [
+  { value: 'qwen3-32B', label: 'qwen3-32B' },
+  { value: 'gemma3-27B', label: 'gemma3-27B' }
+]
+
+// 颜色配置类型
+type ColorName = 'purple' | 'orange' | 'cyan' | 'pink'
+type ColorConfig = {
+  [key in ColorName]: {
+    light: {
+      bg: string
+      text: string
+      border: string
+      hover: string
+    }
+    dark: {
+      bg: string
+      text: string
+      border: string
+      hover: string
+    }
+    active: {
+      bg: string
+      text: string
+      border: string
+    }
+  }
+}
+
+// 颜色配置
+const colorConfig: ColorConfig = {
+  purple: {
+    light: {
+      bg: 'bg-purple-50',
+      text: 'text-purple-700',
+      border: 'border-purple-100',
+      hover: 'hover:bg-purple-100'
+    },
+    dark: {
+      bg: 'dark:bg-purple-900/20',
+      text: 'dark:text-purple-300',
+      border: 'dark:border-purple-900/40',
+      hover: 'dark:hover:bg-purple-900/30'
+    },
+    active: {
+      bg: 'bg-purple-600',
+      text: 'text-white',
+      border: 'border-purple-600'
+    }
+  },
+  orange: {
+    light: {
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      border: 'border-orange-100',
+      hover: 'hover:bg-orange-100'
+    },
+    dark: {
+      bg: 'dark:bg-orange-900/20',
+      text: 'dark:text-orange-300',
+      border: 'dark:border-orange-900/40',
+      hover: 'dark:hover:bg-orange-900/30'
+    },
+    active: {
+      bg: 'bg-orange-600',
+      text: 'text-white',
+      border: 'border-orange-600'
+    }
+  },
+  cyan: {
+    light: {
+      bg: 'bg-cyan-50',
+      text: 'text-cyan-700',
+      border: 'border-cyan-100',
+      hover: 'hover:bg-cyan-100'
+    },
+    dark: {
+      bg: 'dark:bg-cyan-900/20',
+      text: 'dark:text-cyan-300',
+      border: 'dark:border-cyan-900/40',
+      hover: 'dark:hover:bg-cyan-900/30'
+    },
+    active: {
+      bg: 'bg-cyan-600',
+      text: 'text-white',
+      border: 'border-cyan-600'
+    }
+  },
+  pink: {
+    light: {
+      bg: 'bg-pink-50',
+      text: 'text-pink-700',
+      border: 'border-pink-100',
+      hover: 'hover:bg-pink-100'
+    },
+    dark: {
+      bg: 'dark:bg-pink-900/20',
+      text: 'dark:text-pink-300',
+      border: 'dark:border-pink-900/40',
+      hover: 'dark:hover:bg-pink-900/30'
+    },
+    active: {
+      bg: 'bg-pink-600',
+      text: 'text-white',
+      border: 'border-pink-600'
+    }
+  }
+}
+
+// 获取阶段颜色类名
+const getStageColorClasses = (stageName: string, isActive: boolean) => {
+  const stage = stageOptions.find(s => s.value === stageName)
+  const color = stage?.color as ColorName || 'purple'
+  const config = colorConfig[color]
+
+  if (isActive) {
+    return `${config.active.bg} ${config.active.text} ${config.active.border}`
+  }
+
+  return `${config.light.bg} ${config.light.text} ${config.light.border} ${config.light.hover} ${config.dark.bg} ${config.dark.text} ${config.dark.border} ${config.dark.hover}`
+}
+
+// 提示词内容组件
+function PromptContent({ content, stageColor = 'gray' }: { 
+  content: string, 
+  stageColor?: string 
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [shouldShowButton, setShouldShowButton] = useState(false)
+  const [maxHeight, setMaxHeight] = useState<string>('none')
+  
+  // 获取边框颜色
+  const getBorderColorClass = () => {
+    switch(stageColor) {
+      case 'purple': return 'border-purple-500 dark:border-purple-400'
+      case 'orange': return 'border-orange-500 dark:border-orange-400'
+      case 'cyan': return 'border-cyan-500 dark:border-cyan-400'
+      case 'pink': return 'border-pink-500 dark:border-pink-400'
+      default: return 'border-gray-500 dark:border-gray-400'
+    }
+  }
+
+  // 获取渐变颜色 - 修复深色模式渐变效果
+  const getGradientFromColor = () => {
+    // 浅色模式：根据阶段颜色生成对应的渐变效果
+    // 深色模式：统一使用背景色渐变，确保文字逐渐消失的效果
+    const lightGradient = (() => {
+      switch(stageColor) {
+        case 'purple': return 'from-purple-50 via-purple-50/80 to-purple-50/0'
+        case 'orange': return 'from-orange-50 via-orange-50/80 to-orange-50/0'
+        case 'cyan': return 'from-cyan-50 via-cyan-50/80 to-cyan-50/0'
+        case 'pink': return 'from-pink-50 via-pink-50/80 to-pink-50/0'
+        default: return 'from-gray-50 via-gray-50/80 to-gray-50/0'
+      }
+    })()
+    
+    // 深色模式统一使用背景色渐变，与内容区域背景一致
+    const darkGradient = 'dark:from-[var(--accent-background)] dark:via-[var(--accent-background)]/80 dark:to-[var(--accent-background)]/0'
+    
+    return `${lightGradient} ${darkGradient}`
+  }
+
+  // 检查内容高度是否超过阈值
+  const checkHeight = useCallback(() => {
+    if (contentRef.current) {
+      const lineHeight = parseInt(window.getComputedStyle(contentRef.current).lineHeight)
+      const defaultMaxHeight = lineHeight * 5 // 5行的高度
+      const scrollHeight = contentRef.current.scrollHeight
+      setShouldShowButton(scrollHeight > defaultMaxHeight)
+      setMaxHeight(isExpanded ? `${scrollHeight}px` : `${defaultMaxHeight}px`)
+    }
+  }, [isExpanded])
+
+  // 监听内容变化和展开状态变化
+  useEffect(() => {
+    checkHeight()
+    window.addEventListener('resize', checkHeight)
+    return () => window.removeEventListener('resize', checkHeight)
+  }, [content, checkHeight, isExpanded])
+
+  return (
+    <div className="relative">
+      <div 
+        ref={contentRef}
+        style={{ maxHeight }}
+        className={`bg-gray-50 dark:bg-[var(--accent-background)] rounded-xl p-4 border-l-3 ${getBorderColorClass()} transition-all duration-300 ease-in-out overflow-hidden`}
+      >
+        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">
+          {content}
+        </p>
+        
+        {/* 渐变遮罩 - 修复深色模式效果 */}
+        {shouldShowButton && !isExpanded && (
+          <div 
+            className={`absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t ${getGradientFromColor()} pointer-events-none transition-opacity duration-300`}
+          />
+        )}
+      </div>
+      
+      {/* 展开/收起按钮 */}
+      {shouldShowButton && (
+        <div 
+          className={`absolute left-0 right-0 flex justify-center transition-all duration-300 ${
+            isExpanded ? '-mb-4 bottom-2' : '-mb-4 bottom-0'
+          }`}
+        >
+          <div className="relative">
+            <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-12 h-[1px] bg-gray-200 dark:bg-gray-700" />
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="relative flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-[var(--component-background)] rounded-full shadow-sm border border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 group hover:shadow hover:-translate-y-[1px]"
+            >
+              {isExpanded ? (
+                <>
+                  收起
+                  <ChevronUp className="w-3 h-3 transition-transform duration-200 group-hover:-translate-y-0.5" />
+                </>
+              ) : (
+                <>
+                  展开
+                  <ChevronDown className="w-3 h-3 transition-transform duration-200 group-hover:translate-y-0.5" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 通用样式配置
+const styles = {
+  button: {
+    primary: 'bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300',
+    secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-[var(--accent-background)] dark:hover:bg-[var(--border-color)] dark:text-gray-300',
+  },
+  modal: {
+    background: 'bg-white dark:bg-[var(--component-background)]', // 表单背景色改为与输入框一致
+    border: 'border border-gray-200 dark:border-[var(--border-color)]'
+  },
+  input: {
+    base: 'w-full px-3 py-2 rounded-lg transition-colors duration-150',
+    border: 'border border-gray-200 dark:border-[var(--border-color)] focus:border-blue-500 dark:focus:border-blue-400',
+    background: 'bg-gray-50 dark:bg-[var(--background)]', // 输入框背景色改为与表单原来的颜色
+    text: 'text-gray-900 dark:text-gray-100',
+    placeholder: 'placeholder-gray-500 dark:placeholder-gray-400',
+    focus: 'focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20',
+  }
+}
+
+// 获取输入框样式
+const getInputClasses = (isTextArea = false) => {
+  return `${styles.input.base} ${styles.input.border} ${styles.input.background} ${styles.input.text} ${styles.input.placeholder} ${styles.input.focus} ${isTextArea ? 'font-mono text-sm whitespace-pre-wrap' : ''}`
+}
 
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<Prompt[]>([])
@@ -34,17 +304,7 @@ export default function PromptsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string>('')
-
-  // 表单状态
-  const [formData, setFormData] = useState({
-    id: '',
-    name: '',
-    model_name: 'qwen3-32B',
-    stage_name: 'first_meet',
-    prompt_cn: '',
-    prompt_vn: '',
-    mark: ''
-  })
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA)
 
   // 加载提示词数据
   useEffect(() => {
@@ -89,15 +349,7 @@ export default function PromptsPage() {
 
       setPrompts([...(data || []), ...prompts])
       setShowCreateModal(false)
-      setFormData({
-        id: '',
-        name: '',
-        model_name: 'qwen3-32B',
-        stage_name: 'first_meet',
-        prompt_cn: '',
-        prompt_vn: '',
-        mark: ''
-      })
+      setFormData(DEFAULT_FORM_DATA)
     } catch (err) {
       console.error('Error creating prompt:', err)
       setError(err instanceof Error ? err.message : '创建提示词失败')
@@ -143,18 +395,16 @@ export default function PromptsPage() {
 
       setPrompts(prompts.map(p => p.id === formData.id ? (data?.[0] ?? p) : p))
       setShowEditModal(false)
-      setFormData({
-        id: '',
-        name: '',
-        model_name: 'qwen3-32B',
-        stage_name: 'first_meet',
-        prompt_cn: '',
-        prompt_vn: '',
-        mark: ''
-      })
+      setFormData(DEFAULT_FORM_DATA)
     } catch (err) {
       setError(err instanceof Error ? err.message : '编辑提示词失败')
     }
+  }
+
+  // 打开创建模态框
+  function handleOpenCreateModal() {
+    setFormData(DEFAULT_FORM_DATA) // 重置表单数据
+    setShowCreateModal(true)
   }
 
   // 打开编辑模态框
@@ -169,6 +419,13 @@ export default function PromptsPage() {
       mark: prompt.mark || ''
     })
     setShowEditModal(true)
+  }
+
+  // 关闭模态框时重置表单
+  function handleCloseModal() {
+    setFormData(DEFAULT_FORM_DATA)
+    setShowCreateModal(false)
+    setShowEditModal(false)
   }
 
   // 打开删除确认框
@@ -203,8 +460,8 @@ export default function PromptsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">系统提示词</h1>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+          onClick={handleOpenCreateModal}
+          className={`${styles.button.primary} px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors`}
         >
           <Plus className="w-4 h-4" />
           <span>创建提示词</span>
@@ -317,16 +574,12 @@ export default function PromptsPage() {
             >
               {/* 头部信息 */}
               <div className="flex items-center justify-between p-6 pb-4">
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className="flex items-center space-x-3 flex-1 min-w-0 mr-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[100%]">
                     {prompt.name}
                   </h3>
                   <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
-                    getStageColor(prompt.stage_name) === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-900/40' :
-                    getStageColor(prompt.stage_name) === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-100 dark:border-orange-900/40' :
-                    getStageColor(prompt.stage_name) === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border border-cyan-100 dark:border-cyan-900/40' :
-                    getStageColor(prompt.stage_name) === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border border-pink-100 dark:border-pink-900/40' :
-                    'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+                    getStageColorClasses(prompt.stage_name, false)
                   }`}>
                     {getStageLabel(prompt.stage_name)}
                   </span>
@@ -336,7 +589,7 @@ export default function PromptsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 transition-opacity duration-200">
+                <div className="flex items-center space-x-1 transition-opacity duration-200 flex-shrink-0">
                   <button 
                     onClick={() => handleEditClick(prompt)}
                     className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -355,23 +608,21 @@ export default function PromptsPage() {
               </div>
               
               {/* 内容区域 */}
-              <div className="px-6 pb-6 space-y-4">
+              <div className="px-6 pb-6 space-y-6">
                 {/* 中文版本 */}
                 <div>
-                  <div className="bg-gray-50 dark:bg-[var(--accent-background)] rounded-xl p-4 border-l-3 border-blue-500">
-                    <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">
-                      {prompt.prompt_cn}
-                    </p>
-                  </div>
+                  <PromptContent 
+                    content={prompt.prompt_cn} 
+                    stageColor={getStageColor(prompt.stage_name)}
+                  />
                 </div>
 
                 {/* 越南文版本 */}
                 <div>
-                  <div className="bg-gray-50 dark:bg-[var(--accent-background)] rounded-xl p-4 border-l-3 border-emerald-500">
-                    <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">
-                      {prompt.prompt_vn}
-                    </p>
-                  </div>
+                  <PromptContent 
+                    content={prompt.prompt_vn} 
+                    stageColor={getStageColor(prompt.stage_name)}
+                  />
                 </div>
 
                 {/* 备注 */}
@@ -408,217 +659,116 @@ export default function PromptsPage() {
       </div>
 
       {/* 创建提示词模态框 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">创建新提示词</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  提示词名称 *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="给提示词取个名字"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    关联模型
-                  </label>
-                  <select 
-                    value={formData.model_name}
-                    onChange={(e) => setFormData({...formData, model_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="qwen3-32B">qwen3-32B</option>
-                    <option value="gemma3-27B">gemma3-27B</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    聊天阶段
-                  </label>
-                  <select 
-                    value={formData.stage_name}
-                    onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    {stageOptions.map(stage => (
-                      <option key={stage.value} value={stage.value}>{stage.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+      {(showCreateModal || showEditModal) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className={`${styles.modal.background} ${styles.modal.border} rounded-lg max-w-2xl w-full shadow-xl max-h-[90vh] overflow-y-auto`}>
+            <div className="p-6">
+              <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6 sticky top-0 ${styles.modal.background} border-b border-gray-200 dark:border-[var(--border-color)] pb-4 -mx-6 px-6 -mt-6 pt-6 z-10`}>
+                {showCreateModal ? '创建新提示词' : '编辑提示词'}
+              </h3>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  中文提示词模板
-                </label>
-                <textarea
-                  value={formData.prompt_cn}
-                  onChange={(e) => setFormData({...formData, prompt_cn: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder="输入中文提示词模板"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  越南语提示词模板
-                </label>
-                <textarea
-                  value={formData.prompt_vn}
-                  onChange={(e) => setFormData({...formData, prompt_vn: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder="Nhập mẫu prompt tiếng Việt"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  备注
-                </label>
-                <textarea
-                  value={formData.mark}
-                  onChange={(e) => setFormData({...formData, mark: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder='备注信息'
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
-                >
-                  创建
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 编辑提示词模态框 */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">编辑提示词</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  提示词名称 *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="为这个提示词输入一个有意义的名称"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={showCreateModal ? handleCreate : handleEdit} className="space-y-5 mt-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    关联模型
+                    提示词名称 *
                   </label>
-                  <select 
-                    value={formData.model_name}
-                    onChange={(e) => setFormData({...formData, model_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="qwen3-32B">qwen3-32B</option>
-                    <option value="gemma3-27B">gemma3-27B</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    required
+                    className={getInputClasses()}
+                    placeholder="给提示词取个名字"
+                  />
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      关联模型
+                    </label>
+                    <select 
+                      value={formData.model_name}
+                      onChange={(e) => setFormData({...formData, model_name: e.target.value})}
+                      className={getInputClasses()}
+                    >
+                      {modelOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      聊天阶段
+                    </label>
+                    <select 
+                      value={formData.stage_name}
+                      onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
+                      className={getInputClasses()}
+                    >
+                      {stageOptions.map(stage => (
+                        <option key={stage.value} value={stage.value}>{stage.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    聊天阶段
+                    中文提示词模板
                   </label>
-                  <select 
-                    value={formData.stage_name}
-                    onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    {stageOptions.map(stage => (
-                      <option key={stage.value} value={stage.value}>{stage.label}</option>
-                    ))}
-                  </select>
+                  <textarea
+                    value={formData.prompt_cn}
+                    onChange={(e) => setFormData({...formData, prompt_cn: e.target.value})}
+                    rows={4}
+                    className={getInputClasses(true)}
+                    placeholder="输入中文提示词模板"
+                  />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  中文提示词模板
-                </label>
-                <textarea
-                  value={formData.prompt_cn}
-                  onChange={(e) => setFormData({...formData, prompt_cn: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder="输入中文提示词模板"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  越南语提示词模板
-                </label>
-                <textarea
-                  value={formData.prompt_vn}
-                  onChange={(e) => setFormData({...formData, prompt_vn: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder="Nhập mẫu prompt tiếng Việt"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    越南语提示词模板
+                  </label>
+                  <textarea
+                    value={formData.prompt_vn}
+                    onChange={(e) => setFormData({...formData, prompt_vn: e.target.value})}
+                    rows={4}
+                    className={getInputClasses(true)}
+                    placeholder="Nhập mẫu prompt tiếng Việt"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  备注
-                </label>
-                <textarea
-                  value={formData.mark}
-                  onChange={(e) => setFormData({...formData, mark: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-pre-wrap"
-                  placeholder='备注信息'
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    备注
+                  </label>
+                  <textarea
+                    value={formData.mark}
+                    onChange={(e) => setFormData({...formData, mark: e.target.value})}
+                    rows={3}
+                    className={getInputClasses(true)}
+                    placeholder="备注信息"
+                  />
+                </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
-                >
-                  保存
-                </button>
-              </div>
-            </form>
+                <div className={`flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-[var(--border-color)]`}>
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className={`${styles.button.secondary} px-4 py-2 rounded-lg transition-colors duration-150`}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className={`${styles.button.primary} px-4 py-2 rounded-lg transition-colors duration-150`}
+                  >
+                    {showCreateModal ? '创建' : '保存'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

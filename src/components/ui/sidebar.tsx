@@ -111,7 +111,7 @@ export function Sidebar({ user }: SidebarProps) {
 
   return (
     <div className={cn(
-      "h-screen", 
+      "h-screen flex-shrink-0", 
       "bg-white dark:bg-[var(--component-background)] border-r border-gray-200 dark:border-[var(--border-color)] transition-all duration-150 flex flex-col",
       collapsed ? "w-16" : "w-36"
     )}>

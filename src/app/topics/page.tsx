@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, MessageSquare, Hash, Folder, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -76,6 +76,9 @@ export default function TopicsPage() {
   const [deleteId, setDeleteId] = useState<string>('')
   const [deleteType, setDeleteType] = useState<'category' | 'subcategory' | 'topic'>('category')
 
+  // 拖拽检测相关状态
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+
   // 表单状态
   const [formData, setFormData] = useState({
     id: '',
@@ -87,18 +90,24 @@ export default function TopicsPage() {
     subcategory_id: ''
   })
 
-  // 加载所有数据
+  // 优化搜索：添加防抖功能
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  
   useEffect(() => {
-    fetchAllData()
-  }, [])
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // 300ms 防抖
 
-  // 搜索处理
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // 搜索处理 - 使用防抖后的搜索词
   useEffect(() => {
-    if (searchTerm.trim()) {
+    if (debouncedSearchTerm.trim()) {
       const results = categories.flatMap(category => 
         category.subcategories.flatMap(subcategory => 
           subcategory.topics.filter(topic => 
-            topic.content.toLowerCase().includes(searchTerm.toLowerCase())
+            topic.content.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
           )
         )
       )
@@ -107,70 +116,43 @@ export default function TopicsPage() {
       setSearchResults([])
       setHighlightedTopicId('')
     }
-  }, [searchTerm, categories])
+  }, [debouncedSearchTerm, categories])
+
+  // 加载所有数据
+  useEffect(() => {
+    fetchAllData()
+  }, [])
 
   async function fetchAllData() {
     try {
       setLoading(true)
       
-      // 获取所有分类
-      const { data: categoriesData, error: categoriesError } = await supabase
+      // 使用单次 JOIN 查询获取所有数据，提高性能
+      const { data: allData, error } = await supabase
         .from('topic_categories')
-        .select('*')
+        .select(`
+          *,
+          subcategories:topic_subcategories(
+            *,
+            topics:topics(*)
+          )
+        `)
         .order('sort_order', { ascending: true })
 
-      if (categoriesError) throw categoriesError
+      if (error) throw error
 
-      // 获取所有子分类
-      const { data: subcategoriesData, error: subcategoriesError } = await supabase
-        .from('topic_subcategories')
-        .select('*')
-        .order('sort_order', { ascending: true })
+      // 处理数据结构，确保排序正确
+      const processedCategories = allData?.map(category => ({
+        ...category,
+        subcategories: (category.subcategories || [])
+          .map((sub: TopicSubcategory & { topics: Topic[] }) => ({
+            ...sub,
+            topics: (sub.topics || []).sort((a: Topic, b: Topic) => a.sort_order - b.sort_order)
+          }))
+          .sort((a: TopicSubcategory, b: TopicSubcategory) => a.sort_order - b.sort_order)
+      })) || []
 
-      if (subcategoriesError) throw subcategoriesError
-
-      // 获取所有话题
-      const { data: topicsData, error: topicsError } = await supabase
-        .from('topics')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-      if (topicsError) throw topicsError
-
-      // 组织数据结构
-      const categoryMap = new Map<string, CategoryWithData>()
-      
-      // 初始化分类
-      categoriesData?.forEach(category => {
-        categoryMap.set(category.id, {
-          ...category,
-          subcategories: []
-        })
-      })
-
-      // 添加子分类
-      subcategoriesData?.forEach(subcategory => {
-        const category = categoryMap.get(subcategory.category_id)
-        if (category) {
-          category.subcategories.push({
-            ...subcategory,
-            topics: []
-          })
-        }
-      })
-
-      // 添加话题
-      topicsData?.forEach(topic => {
-        const category = categoryMap.get(topic.category_id)
-        if (category) {
-          const subcategory = category.subcategories.find(sub => sub.id === topic.subcategory_id)
-          if (subcategory) {
-            subcategory.topics.push(topic)
-          }
-        }
-      })
-
-      setCategories(Array.from(categoryMap.values()))
+      setCategories(processedCategories)
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载数据失败')
     } finally {
@@ -179,29 +161,33 @@ export default function TopicsPage() {
   }
 
   // 切换分类展开状态
-  function toggleCategory(categoryId: string) {
-    const newExpanded = new Set(expandedCategories)
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId)
-    } else {
-      newExpanded.add(categoryId)
-    }
-    setExpandedCategories(newExpanded)
-  }
+  const toggleCategory = useCallback((categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newExpanded = new Set(prev)
+      if (newExpanded.has(categoryId)) {
+        newExpanded.delete(categoryId)
+      } else {
+        newExpanded.add(categoryId)
+      }
+      return newExpanded
+    })
+  }, [])
 
   // 切换子分类展开状态
-  function toggleSubcategory(subcategoryId: string) {
-    const newExpanded = new Set(expandedSubcategories)
-    if (newExpanded.has(subcategoryId)) {
-      newExpanded.delete(subcategoryId)
-    } else {
-      newExpanded.add(subcategoryId)
-    }
-    setExpandedSubcategories(newExpanded)
-  }
+  const toggleSubcategory = useCallback((subcategoryId: string) => {
+    setExpandedSubcategories(prev => {
+      const newExpanded = new Set(prev)
+      if (newExpanded.has(subcategoryId)) {
+        newExpanded.delete(subcategoryId)
+      } else {
+        newExpanded.add(subcategoryId)
+      }
+      return newExpanded
+    })
+  }, [])
 
   // 搜索结果点击处理
-  function handleSearchResultClick(topic: Topic) {
+  const handleSearchResultClick = useCallback((topic: Topic) => {
     // 展开相关的分类和子分类
     setExpandedCategories(prev => new Set([...prev, topic.category_id]))
     setExpandedSubcategories(prev => new Set([...prev, topic.subcategory_id]))
@@ -219,7 +205,16 @@ export default function TopicsPage() {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
     }, 100)
-  }
+  }, [])
+
+  // 使用useMemo优化分类数据的计算
+  const categoryStats = useMemo(() => {
+    return categories.map(category => ({
+      id: category.id,
+      subcategoryCount: category.subcategories.length,
+      topicCount: category.subcategories.reduce((sum, sub) => sum + sub.topics.length, 0)
+    }))
+  }, [categories])
 
   // 创建处理函数
   async function handleCreate(e: React.FormEvent) {
@@ -227,34 +222,34 @@ export default function TopicsPage() {
     try {
       if (selectedLevel === 'category') {
         // 获取当前最大排序值，如果没有数据则从1000开始
-        const { data: maxData } = await supabase
-          .from('topic_categories')
-          .select('sort_order')
-          .order('sort_order', { ascending: false })
-          .limit(1)
+        const maxSortOrder = categories.length > 0 
+          ? Math.max(...categories.map(c => c.sort_order)) 
+          : 999
+        const nextSortOrder = maxSortOrder + 1
 
-        const nextSortOrder = maxData && maxData.length > 0 ? (maxData[0].sort_order + 1) : 1000
-
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topic_categories')
           .insert([{
             name_cn: formData.name_cn,
             name_vn: formData.name_vn,
             sort_order: nextSortOrder
           }])
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态，避免重新获取所有数据
+        if (data?.[0]) {
+          setCategories(prev => [...prev, { ...data[0], subcategories: [] }])
+        }
       } else if (selectedLevel === 'subcategory') {
-        // 获取当前分类下最大排序值，如果没有数据则从1000开始
-        const { data: maxData } = await supabase
-          .from('topic_subcategories')
-          .select('sort_order')
-          .eq('category_id', formData.category_id)
-          .order('sort_order', { ascending: false })
-          .limit(1)
+        const category = categories.find(c => c.id === formData.category_id)
+        const maxSortOrder = category?.subcategories && category.subcategories.length > 0
+          ? Math.max(...category.subcategories.map(s => s.sort_order))
+          : 999
+        const nextSortOrder = maxSortOrder + 1
 
-        const nextSortOrder = maxData && maxData.length > 0 ? (maxData[0].sort_order + 1) : 1000
-
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topic_subcategories')
           .insert([{
             category_id: formData.category_id,
@@ -262,19 +257,30 @@ export default function TopicsPage() {
             name_vn: formData.name_vn,
             sort_order: nextSortOrder
           }])
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态
+        if (data?.[0] && category) {
+          setCategories(prev => prev.map(cat => 
+            cat.id === formData.category_id 
+              ? { 
+                  ...cat, 
+                  subcategories: [...cat.subcategories, { ...data[0], topics: [] }]
+                }
+              : cat
+          ))
+        }
       } else if (selectedLevel === 'topic') {
-        // 获取当前子分类下最大排序值，如果没有数据则从1000开始
-        const { data: maxData } = await supabase
-          .from('topics')
-          .select('sort_order')
-          .eq('subcategory_id', formData.subcategory_id)
-          .order('sort_order', { ascending: false })
-          .limit(1)
+        const category = categories.find(c => c.id === formData.category_id)
+        const subcategory = category?.subcategories.find(s => s.id === formData.subcategory_id)
+        const maxSortOrder = subcategory?.topics && subcategory.topics.length > 0
+          ? Math.max(...subcategory.topics.map(t => t.sort_order))
+          : 999
+        const nextSortOrder = maxSortOrder + 1
 
-        const nextSortOrder = maxData && maxData.length > 0 ? (maxData[0].sort_order + 1) : 1000
-
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topics')
           .insert([{
             category_id: formData.category_id,
@@ -283,10 +289,27 @@ export default function TopicsPage() {
             usage_count: 0,
             sort_order: nextSortOrder
           }])
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态
+        if (data?.[0] && category && subcategory) {
+          setCategories(prev => prev.map(cat => 
+            cat.id === formData.category_id
+              ? {
+                  ...cat,
+                  subcategories: cat.subcategories.map(sub =>
+                    sub.id === formData.subcategory_id
+                      ? { ...sub, topics: [...sub.topics, data[0]] }
+                      : sub
+                  )
+                }
+              : cat
+          ))
+        }
       }
 
-      await fetchAllData()
       setShowCreateModal(false)
       resetFormData()
     } catch (err) {
@@ -299,7 +322,7 @@ export default function TopicsPage() {
     e.preventDefault()
     try {
       if (selectedLevel === 'category') {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topic_categories')
           .update({
             name_cn: formData.name_cn,
@@ -307,9 +330,20 @@ export default function TopicsPage() {
             sort_order: formData.sort_order
           })
           .eq('id', formData.id)
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态
+        if (data?.[0]) {
+          setCategories(prev => prev.map(category => 
+            category.id === formData.id 
+              ? { ...category, ...data[0] }
+              : category
+          ))
+        }
       } else if (selectedLevel === 'subcategory') {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topic_subcategories')
           .update({
             name_cn: formData.name_cn,
@@ -317,19 +351,45 @@ export default function TopicsPage() {
             sort_order: formData.sort_order
           })
           .eq('id', formData.id)
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态
+        if (data?.[0]) {
+          setCategories(prev => prev.map(category => ({
+            ...category,
+            subcategories: category.subcategories.map(sub =>
+              sub.id === formData.id ? { ...sub, ...data[0] } : sub
+            )
+          })))
+        }
       } else if (selectedLevel === 'topic') {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('topics')
           .update({
             content: formData.content,
             sort_order: formData.sort_order
           })
           .eq('id', formData.id)
+          .select()
+          
         if (error) throw error
+        
+        // 局部更新状态
+        if (data?.[0]) {
+          setCategories(prev => prev.map(category => ({
+            ...category,
+            subcategories: category.subcategories.map(sub => ({
+              ...sub,
+              topics: sub.topics.map(topic =>
+                topic.id === formData.id ? { ...topic, ...data[0] } : topic
+              )
+            }))
+          })))
+        }
       }
 
-      await fetchAllData()
       setShowEditModal(false)
       resetFormData()
     } catch (err) {
@@ -345,22 +405,42 @@ export default function TopicsPage() {
           .from('topic_categories')
           .delete()
           .eq('id', deleteId)
+          
         if (error) throw error
+        
+        // 局部更新状态
+        setCategories(prev => prev.filter(category => category.id !== deleteId))
       } else if (deleteType === 'subcategory') {
         const { error } = await supabase
           .from('topic_subcategories')
           .delete()
           .eq('id', deleteId)
+          
         if (error) throw error
+        
+        // 局部更新状态
+        setCategories(prev => prev.map(category => ({
+          ...category,
+          subcategories: category.subcategories.filter(sub => sub.id !== deleteId)
+        })))
       } else if (deleteType === 'topic') {
         const { error } = await supabase
           .from('topics')
           .delete()
           .eq('id', deleteId)
+          
         if (error) throw error
+        
+        // 局部更新状态
+        setCategories(prev => prev.map(category => ({
+          ...category,
+          subcategories: category.subcategories.map(sub => ({
+            ...sub,
+            topics: sub.topics.filter(topic => topic.id !== deleteId)
+          }))
+        })))
       }
 
-      await fetchAllData()
       setShowDeleteModal(false)
       setDeleteId('')
     } catch (err) {
@@ -410,29 +490,37 @@ export default function TopicsPage() {
     setShowDeleteModal(true)
   }
 
+  // 处理鼠标按下事件
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setDragStart({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  // 处理点击事件，只有在非拖拽情况下才触发
+  const handleToggleClick = useCallback((toggleFunction: () => void, e: React.MouseEvent) => {
+    if (!dragStart) return
+    
+    const deltaX = Math.abs(e.clientX - dragStart.x)
+    const deltaY = Math.abs(e.clientY - dragStart.y)
+    const threshold = 5 // 5像素的容差
+    
+    // 只有在移动距离很小时才认为是点击操作
+    if (deltaX <= threshold && deltaY <= threshold) {
+      // 检查是否有文字被选中
+      const selection = window.getSelection()
+      if (!selection || selection.toString().length === 0) {
+        toggleFunction()
+      }
+    }
+    
+    setDragStart(null)
+  }, [dragStart])
+
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+    return <div className="p-6">加载中...</div>
   }
 
   if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="text-red-600 dark:text-red-400">错误: {error}</div>
-        </div>
-      </div>
-    )
+    return <div className="p-6 text-red-500">错误: {error}</div>
   }
 
   return (
@@ -489,33 +577,34 @@ export default function TopicsPage() {
           {categories.map((category) => (
             <div key={category.id}>
               {/* 大类 */}
-              <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
+              <div 
+                className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150"
+                onMouseDown={handleMouseDown}
+                onClick={(e) => handleToggleClick(() => toggleCategory(category.id), e)}
+              >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center flex-1">
-                    <button
-                      onClick={() => toggleCategory(category.id)}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
-                    >
+                  <div className="flex items-center flex-1 min-w-0 mr-4">
+                    <div className="p-1 hover:bg-gray-100 dark:hover:bg-[var(--accent-background)] rounded">
                       {expandedCategories.has(category.id) ? (
                         <ChevronDown className="h-4 w-4 text-gray-500" />
                       ) : (
                         <ChevronRight className="h-4 w-4 text-gray-500" />
                       )}
-                    </button>
-                    <Hash className="h-5 w-5 text-blue-500 ml-2" />
-                    <div className="ml-3 flex-1">
-                      <div className="flex items-center">
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                    </div>
+                    <Hash className="h-5 w-5 text-blue-500 ml-2 flex-shrink-0" />
+                    <div className="ml-3 flex-1 min-w-0">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 cursor-text select-text break-words">
                           {category.name_cn} ({category.name_vn})
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                          {category.subcategories.length} 个小类，
-                          {category.subcategories.reduce((sum, sub) => sum + sub.topics.length, 0)} 个话题
+                        <span className="text-xs text-gray-500 dark:text-gray-400 cursor-text select-text whitespace-nowrap">
+                          {categoryStats.find(stat => stat.id === category.id)?.subcategoryCount || 0} 个小类，
+                          {categoryStats.find(stat => stat.id === category.id)?.topicCount || 0} 个话题
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openEditModal('category', { id: category.id, name_cn: category.name_cn, name_vn: category.name_vn, sort_order: category.sort_order })}
                       className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
@@ -539,32 +628,33 @@ export default function TopicsPage() {
                 <>
                   {category.subcategories.map((subcategory) => (
                     <div key={subcategory.id} className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)]">
-                      <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
+                      <div 
+                        className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150"
+                        onMouseDown={handleMouseDown}
+                        onClick={(e) => handleToggleClick(() => toggleSubcategory(subcategory.id), e)}
+                      >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center flex-1">
-                            <button
-                              onClick={() => toggleSubcategory(subcategory.id)}
-                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
-                            >
+                          <div className="flex items-center flex-1 min-w-0 mr-4">
+                            <div className="p-1 hover:bg-gray-100 dark:hover:bg-[var(--accent-background)] rounded">
                               {expandedSubcategories.has(subcategory.id) ? (
                                 <ChevronDown className="h-4 w-4 text-gray-500" />
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-gray-500" />
                               )}
-                            </button>
-                            <Folder className="h-4 w-4 text-green-500 ml-2" />
-                            <div className="ml-3 flex-1">
-                              <div className="flex items-center">
-                                <span className="font-medium text-gray-900 dark:text-gray-100">
+                            </div>
+                            <Folder className="h-4 w-4 text-green-500 ml-2 flex-shrink-0" />
+                            <div className="ml-3 flex-1 min-w-0">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900 dark:text-gray-100 cursor-text select-text break-words">
                                   {subcategory.name_cn} ({subcategory.name_vn})
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 cursor-text select-text whitespace-nowrap">
                                   {subcategory.topics.length} 个话题
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => openEditModal('subcategory', { id: subcategory.id, name_cn: subcategory.name_cn, name_vn: subcategory.name_vn, sort_order: subcategory.sort_order, category_id: subcategory.category_id })}
                               className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
@@ -596,18 +686,18 @@ export default function TopicsPage() {
                             >
                               <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center flex-1">
-                                    <MessageSquare className="h-4 w-4 text-purple-500 ml-4" />
-                                    <div className="ml-3 flex-1">
-                                      <div className="flex items-center">
-                                        <span className="text-sm text-gray-900 dark:text-gray-100">{topic.content}</span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                  <div className="flex items-center flex-1 min-w-0 mr-4">
+                                    <MessageSquare className="h-4 w-4 text-purple-500 ml-4 flex-shrink-0" />
+                                    <div className="ml-3 flex-1 min-w-0">
+                                      <div className="flex flex-col">
+                                        <span className="text-sm text-gray-900 dark:text-gray-100 cursor-text select-text break-words">{topic.content}</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 cursor-text select-text whitespace-nowrap">
                                           使用次数: {topic.usage_count}
                                         </span>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center space-x-1">
+                                  <div className="flex items-center space-x-1 flex-shrink-0">
                                     <button
                                       onClick={() => openEditModal('topic', { id: topic.id, content: topic.content, sort_order: topic.sort_order, category_id: topic.category_id, subcategory_id: topic.subcategory_id })}
                                       className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded"
@@ -741,7 +831,7 @@ export default function TopicsPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
                   >
                     取消
                   </button>
@@ -830,7 +920,7 @@ export default function TopicsPage() {
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
                   >
                     取消
                   </button>
@@ -862,7 +952,7 @@ export default function TopicsPage() {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--component-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
                 >
                   取消
                 </button>
