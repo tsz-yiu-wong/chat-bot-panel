@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, BookOpen, MessageSquare, Trash2, Edit, Settings, ChevronDown } from 'lucide-react'
+import { Plus, BookOpen, MessageSquare, Trash2, Edit, ChevronDown } from 'lucide-react'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Form, Input, Textarea } from '@/components/ui/form'
@@ -252,7 +252,15 @@ export default function KnowledgePage() {
       : sortedCategories
     
     return finalCategories.map(category => {
-      const count = currentData.filter(item => (item as any)[fieldName] === category).length
+      const count = currentData.filter(item => {
+        if (fieldName === 'category' && 'category' in item) {
+          return item.category === category
+        }
+        if (fieldName === 'scenario' && 'scenario' in item) {
+          return item.scenario === category
+        }
+        return false
+      }).length
       return {
         value: category,
         label: category,
@@ -948,7 +956,7 @@ export default function KnowledgePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-3 mb-4">
-                        <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex-shrink-0">
+                        <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
                           {script.scenario}
                         </span>
                       </div>

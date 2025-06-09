@@ -78,7 +78,14 @@ export async function POST(request: NextRequest) {
     
     // 检查向量支持并存储
     const hasVectorSupport = await checkVectorSupport()
-    let storeData: any = {
+    const storeData: {
+      document_id: string
+      document_type: string
+      content: string
+      metadata: Record<string, unknown>
+      updated_at: string
+      embedding?: string
+    } = {
       document_id: documentId,
       document_type: documentType,
       content,

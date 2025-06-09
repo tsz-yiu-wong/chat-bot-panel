@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/form'
-import { searchSimilarDocuments } from '@/lib/vector'
 
 interface SearchResult {
   id: string
@@ -11,7 +10,7 @@ interface SearchResult {
   content: string
   type: string
   similarity: number
-  metadata: any
+  metadata: Record<string, unknown>
 }
 
 interface SearchResponse {
@@ -25,16 +24,22 @@ interface SearchResponse {
   }
 }
 
+interface VectorStats {
+  total_vectors: number
+  by_type: Record<string, number>
+  sample_data?: Record<string, unknown>[]
+}
+
 export function VectorTestComponent() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
-  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [debugInfo, setDebugInfo] = useState<SearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [threshold, setThreshold] = useState(0.1)
   const [thresholdInput, setThresholdInput] = useState('0.1')
   const [thresholdError, setThresholdError] = useState<string | null>(null)
-  const [vectorStats, setVectorStats] = useState<any>(null)
+  const [vectorStats, setVectorStats] = useState<VectorStats | null>(null)
 
   const handleSearch = async () => {
     if (!query.trim()) return
@@ -217,7 +222,11 @@ export function VectorTestComponent() {
           <h4 className="font-medium text-gray-900 dark:text-gray-100">
             检索结果 ({results.length}):
           </h4>
-          {results.map((result, index) => (
+          {results.map((result, index) => {
+            const categoryText = result.metadata?.category ? String(result.metadata.category) : null
+            const scenarioText = result.metadata?.scenario ? String(result.metadata.scenario) : null
+            
+            return (
             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
@@ -228,14 +237,14 @@ export function VectorTestComponent() {
                   }`}>
                     {result.type === 'abbreviation' ? '缩写' : '话术'}
                   </span>
-                  {result.metadata?.category && (
+                  {categoryText && (
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {result.metadata.category}
+                      {categoryText}
                     </span>
                   )}
-                  {result.metadata?.scenario && (
+                  {scenarioText && (
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {result.metadata.scenario}
+                      {scenarioText}
                     </span>
                   )}
                 </div>
@@ -250,7 +259,8 @@ export function VectorTestComponent() {
                 {result.content.length > 200 ? `${result.content.substring(0, 200)}...` : result.content}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       ) : !loading && query && (
         <div className="text-center py-8">
