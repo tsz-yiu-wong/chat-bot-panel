@@ -3,6 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Edit, Trash2, Bot, Tag, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { Modal, ConfirmModal } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
+import { Form, Input, Select, Textarea } from '@/components/ui/form'
+import { FilterTabs } from '@/components/ui/filter-tabs'
+import { PageHeader } from '@/components/ui/page-header'
+import { LoadingSpinner } from '@/components/ui/loading'
 
 // 类型定义
 interface Prompt {
@@ -246,9 +252,11 @@ function PromptContent({ content, stageColor = 'gray' }: {
         >
           <div className="relative">
             <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-12 h-[1px] bg-gray-200 dark:bg-gray-700" />
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="relative flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-[var(--component-background)] rounded-full shadow-sm border border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 group hover:shadow hover:-translate-y-[1px]"
+              className="relative flex items-center gap-1 px-3 py-1 text-xs bg-white dark:bg-[var(--component-background)] rounded-full shadow-sm border border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500 hover:shadow hover:-translate-y-[1px]"
             >
               {isExpanded ? (
                 <>
@@ -261,37 +269,12 @@ function PromptContent({ content, stageColor = 'gray' }: {
                   <ChevronDown className="w-3 h-3 transition-transform duration-200 group-hover:translate-y-0.5" />
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       )}
     </div>
   )
-}
-
-// 通用样式配置
-const styles = {
-  button: {
-    primary: 'bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300',
-    secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-[var(--accent-background)] dark:hover:bg-[var(--border-color)] dark:text-gray-300',
-  },
-  modal: {
-    background: 'bg-white dark:bg-[var(--component-background)]', // 表单背景色改为与输入框一致
-    border: 'border border-gray-200 dark:border-[var(--border-color)]'
-  },
-  input: {
-    base: 'w-full px-3 py-2 rounded-lg transition-colors duration-150',
-    border: 'border border-gray-200 dark:border-[var(--border-color)] focus:border-blue-500 dark:focus:border-blue-400',
-    background: 'bg-gray-50 dark:bg-[var(--background)]', // 输入框背景色改为与表单原来的颜色
-    text: 'text-gray-900 dark:text-gray-100',
-    placeholder: 'placeholder-gray-500 dark:placeholder-gray-400',
-    focus: 'focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20',
-  }
-}
-
-// 获取输入框样式
-const getInputClasses = (isTextArea = false) => {
-  return `${styles.input.base} ${styles.input.border} ${styles.input.background} ${styles.input.text} ${styles.input.placeholder} ${styles.input.focus} ${isTextArea ? 'font-mono text-sm whitespace-pre-wrap' : ''}`
 }
 
 export default function PromptsPage() {
@@ -357,16 +340,16 @@ export default function PromptsPage() {
   }
 
   // 删除提示词
-  async function handleDelete(id: string) {
+  async function handleDelete() {
     try {
       const { error } = await supabase
         .from('prompts')
         .delete()
-        .eq('id', id)
+        .eq('id', deleteId)
 
       if (error) throw error
 
-      setPrompts(prompts.filter(p => p.id !== id))
+      setPrompts(prompts.filter(p => p.id !== deleteId))
       setShowDeleteModal(false)
       setDeleteId('')
     } catch (err) {
@@ -450,108 +433,61 @@ export default function PromptsPage() {
     return stage?.label || stageName
   }
 
-  if (loading) return <div className="p-6">加载中...</div>
+  // 构建筛选选项
+  const stageFilterOptions = [
+    { value: 'all', label: '全部', count: prompts.length },
+    ...stageOptions.map(stage => ({
+      value: stage.value,
+      label: stage.label,
+      count: prompts.filter(p => p.stage_name === stage.value).length,
+      color: stage.color
+    }))
+  ]
+
+  const modelFilterOptions = [
+    { value: 'all', label: '全部', count: prompts.length },
+    ...['qwen3-32B', 'gemma3-27B'].map(model => ({
+      value: model,
+      label: model,
+      count: prompts.filter(p => p.model_name === model).length,
+      color: 'indigo',
+      icon: <Bot className="w-3 h-3" />
+    }))
+  ]
+
+  if (loading) return <div className="p-6"><LoadingSpinner size="large" text="加载提示词..." /></div>
   if (error) return <div className="p-6 text-red-500">错误: {error}</div>
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">系统提示词</h1>
-        </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className={`${styles.button.primary} px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors`}
-        >
-          <Plus className="w-4 h-4" />
-          <span>创建提示词</span>
-        </button>
-      </div>
+      <PageHeader 
+        title="系统提示词"
+        action={
+          <Button onClick={handleOpenCreateModal}>
+            <Plus className="w-4 h-4 mr-2" />
+            创建提示词
+          </Button>
+        }
+      />
 
       {/* 筛选器 */}
       <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6">
         <div className="space-y-4">
           {/* 阶段筛选 */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              阶段：
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedStage('all')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                  selectedStage === 'all'
-                    ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100'
-                    : 'bg-white dark:bg-[var(--component-background)] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500'
-                }`}
-              >
-                全部 ({prompts.length})
-              </button>
-              {stageOptions.map(stage => {
-                const count = prompts.filter(p => p.stage_name === stage.value).length
-                return (
-                  <button
-                    key={stage.value}
-                    onClick={() => setSelectedStage(stage.value)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                      selectedStage === stage.value
-                        ? stage.color === 'purple' ? 'bg-purple-600 text-white border-purple-600' :
-                          stage.color === 'orange' ? 'bg-orange-600 text-white border-orange-600' :
-                          stage.color === 'cyan' ? 'bg-cyan-600 text-white border-cyan-600' :
-                          stage.color === 'pink' ? 'bg-pink-600 text-white border-pink-600' :
-                          'bg-gray-600 text-white border-gray-600'
-                        : stage.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-100 dark:border-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/30' :
-                          stage.color === 'orange' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-100 dark:border-orange-900/40 hover:bg-orange-100 dark:hover:bg-orange-900/30' :
-                          stage.color === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-100 dark:border-cyan-900/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/30' :
-                          stage.color === 'pink' ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 border-pink-100 dark:border-pink-900/40 hover:bg-pink-100 dark:hover:bg-pink-900/30' :
-                          'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {stage.label} ({count})
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <FilterTabs
+            label="阶段"
+            options={stageFilterOptions}
+            selectedValue={selectedStage}
+            onValueChange={setSelectedStage}
+          />
 
           {/* 模型筛选 */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              模型：
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedModel('all')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                  selectedModel === 'all'
-                    ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100'
-                    : 'bg-white dark:bg-[var(--component-background)] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[var(--border-color)] hover:border-gray-300 dark:hover:border-gray-500'
-                }`}
-              >
-                全部 ({prompts.length})
-              </button>
-              {['qwen3-32B', 'gemma3-27B'].map(model => {
-                const count = prompts.filter(p => p.model_name === model).length
-                return (
-                  <button
-                    key={model}
-                    onClick={() => setSelectedModel(model)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                      selectedModel === model
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-1.5">
-                      <Bot className="w-3 h-3" />
-                      <span>{model}</span>
-                      <span className="opacity-75">({count})</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <FilterTabs
+            label="模型"
+            options={modelFilterOptions}
+            selectedValue={selectedModel}
+            onValueChange={setSelectedModel}
+          />
         </div>
       </div>
 
@@ -570,7 +506,7 @@ export default function PromptsPage() {
           {filteredPrompts.map((prompt) => (
             <div 
               key={prompt.id} 
-              className="group bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md"
+              className="group bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-lg"
             >
               {/* 头部信息 */}
               <div className="flex items-center justify-between p-6 pb-4">
@@ -589,21 +525,25 @@ export default function PromptsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 transition-opacity duration-200 flex-shrink-0">
-                  <button 
+                <div className="flex items-center space-x-1 transition-opacity duration-200 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                  <Button 
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleEditClick(prompt)}
-                    className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     title="编辑"
                   >
                     <Edit className="w-4 h-4" />
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleDeleteClick(prompt.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     title="删除"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               
@@ -658,149 +598,86 @@ export default function PromptsPage() {
         </div>
       </div>
 
-      {/* 创建提示词模态框 */}
-      {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className={`${styles.modal.background} ${styles.modal.border} rounded-lg max-w-2xl w-full shadow-xl max-h-[90vh] overflow-y-auto`}>
-            <div className="p-6">
-              <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6 sticky top-0 ${styles.modal.background} border-b border-gray-200 dark:border-[var(--border-color)] pb-4 -mx-6 px-6 -mt-6 pt-6 z-10`}>
-                {showCreateModal ? '创建新提示词' : '编辑提示词'}
-              </h3>
-              
-              <form onSubmit={showCreateModal ? handleCreate : handleEdit} className="space-y-5 mt-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    提示词名称 *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                    className={getInputClasses()}
-                    placeholder="给提示词取个名字"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      关联模型
-                    </label>
-                    <select 
-                      value={formData.model_name}
-                      onChange={(e) => setFormData({...formData, model_name: e.target.value})}
-                      className={getInputClasses()}
-                    >
-                      {modelOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      聊天阶段
-                    </label>
-                    <select 
-                      value={formData.stage_name}
-                      onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
-                      className={getInputClasses()}
-                    >
-                      {stageOptions.map(stage => (
-                        <option key={stage.value} value={stage.value}>{stage.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    中文提示词模板
-                  </label>
-                  <textarea
-                    value={formData.prompt_cn}
-                    onChange={(e) => setFormData({...formData, prompt_cn: e.target.value})}
-                    rows={4}
-                    className={getInputClasses(true)}
-                    placeholder="输入中文提示词模板"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    越南语提示词模板
-                  </label>
-                  <textarea
-                    value={formData.prompt_vn}
-                    onChange={(e) => setFormData({...formData, prompt_vn: e.target.value})}
-                    rows={4}
-                    className={getInputClasses(true)}
-                    placeholder="Nhập mẫu prompt tiếng Việt"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    备注
-                  </label>
-                  <textarea
-                    value={formData.mark}
-                    onChange={(e) => setFormData({...formData, mark: e.target.value})}
-                    rows={3}
-                    className={getInputClasses(true)}
-                    placeholder="备注信息"
-                  />
-                </div>
-
-                <div className={`flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-[var(--border-color)]`}>
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className={`${styles.button.secondary} px-4 py-2 rounded-lg transition-colors duration-150`}
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    className={`${styles.button.primary} px-4 py-2 rounded-lg transition-colors duration-150`}
-                  >
-                    {showCreateModal ? '创建' : '保存'}
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* 创建/编辑提示词模态框 */}
+      <Modal
+        isOpen={showCreateModal || showEditModal}
+        onClose={handleCloseModal}
+        title={showCreateModal ? '创建新提示词' : '编辑提示词'}
+        maxWidth="2xl"
+      >
+        <Form onSubmit={showCreateModal ? handleCreate : handleEdit}>
+          <Input
+            label="提示词名称"
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            required
+            placeholder="给提示词取个名字"
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="关联模型"
+              value={formData.model_name}
+              onChange={(e) => setFormData({...formData, model_name: e.target.value})}
+              options={modelOptions}
+            />
+            <Select
+              label="聊天阶段"
+              value={formData.stage_name}
+              onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
+              options={stageOptions}
+            />
           </div>
-        </div>
-      )}
+          
+          <Textarea
+            label="中文提示词模板"
+            value={formData.prompt_cn}
+            onChange={(e) => setFormData({...formData, prompt_cn: e.target.value})}
+            rows={4}
+            placeholder="输入中文提示词模板"
+          />
+
+          <Textarea
+            label="越南语提示词模板"
+            value={formData.prompt_vn}
+            onChange={(e) => setFormData({...formData, prompt_vn: e.target.value})}
+            rows={4}
+            placeholder="Nhập mẫu prompt tiếng Việt"
+          />
+
+          <Textarea
+            label="备注"
+            value={formData.mark}
+            onChange={(e) => setFormData({...formData, mark: e.target.value})}
+            rows={3}
+            placeholder="备注信息"
+          />
+
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-[var(--border-color)]">
+            <Button variant="secondary" type="button" onClick={handleCloseModal}>
+              取消
+            </Button>
+            <Button type="submit">
+              {showCreateModal ? '创建' : '保存'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
 
       {/* 删除确认模态框 */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">确认删除</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              确定要删除这个提示词吗？此操作无法撤销。
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false)
-                  setDeleteId('')
-                }}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeleteId('')
+        }}
+        onConfirm={handleDelete}
+        title="确认删除"
+        message="确定要删除这个提示词吗？此操作无法撤销。"
+        confirmText="删除"
+        cancelText="取消"
+        type="danger"
+      />
     </div>
   )
 } 

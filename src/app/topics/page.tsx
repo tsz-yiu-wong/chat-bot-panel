@@ -1,8 +1,14 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, MessageSquare, Hash, Folder, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, MessageSquare, Hash, Folder } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { Modal, ConfirmModal } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
+import { Form, Input, Textarea } from '@/components/ui/form'
+import { SearchBox } from '@/components/ui/search-box'
+import { PageHeader } from '@/components/ui/page-header'
+import { LoadingSpinner } from '@/components/ui/loading'
 
 // 类型定义
 interface TopicCategory {
@@ -516,7 +522,7 @@ export default function TopicsPage() {
   }, [dragStart])
 
   if (loading) {
-    return <div className="p-6">加载中...</div>
+    return <div className="p-6"><LoadingSpinner size="large" text="加载话题库..." /></div>
   }
 
   if (error) {
@@ -525,25 +531,15 @@ export default function TopicsPage() {
 
   return (
     <div className="p-6">
-      {/* 页面标题和操作 */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">话题库</h1>
-        </div>
-      </div>
+      <PageHeader title="话题库" />
 
       {/* 搜索框 */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="搜索话题内容..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-          />
-        </div>
+        <SearchBox
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="搜索话题内容..."
+        />
         
         {/* 搜索结果 */}
         {searchResults.length > 0 && (
@@ -578,7 +574,7 @@ export default function TopicsPage() {
             <div key={category.id}>
               {/* 大类 */}
               <div 
-                className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150"
+                className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
                 onMouseDown={handleMouseDown}
                 onClick={(e) => handleToggleClick(() => toggleCategory(category.id), e)}
               >
@@ -605,20 +601,24 @@ export default function TopicsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openEditModal('category', { id: category.id, name_cn: category.name_cn, name_vn: category.name_vn, sort_order: category.sort_order })}
-                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       title="编辑大类"
                     >
                       <Edit className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openDeleteModal(category.id, 'category')}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                       title="删除大类"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -629,7 +629,7 @@ export default function TopicsPage() {
                   {category.subcategories.map((subcategory) => (
                     <div key={subcategory.id} className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)]">
                       <div 
-                        className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150"
+                        className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
                         onMouseDown={handleMouseDown}
                         onClick={(e) => handleToggleClick(() => toggleSubcategory(subcategory.id), e)}
                       >
@@ -655,20 +655,24 @@ export default function TopicsPage() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => openEditModal('subcategory', { id: subcategory.id, name_cn: subcategory.name_cn, name_vn: subcategory.name_vn, sort_order: subcategory.sort_order, category_id: subcategory.category_id })}
-                              className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                              className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
                               title="编辑小类"
                             >
                               <Edit className="h-4 w-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => openDeleteModal(subcategory.id, 'subcategory')}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                               title="删除小类"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -684,7 +688,7 @@ export default function TopicsPage() {
                                 highlightedTopicId === topic.id ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                               }`}
                             >
-                              <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150">
+                              <div className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center flex-1 min-w-0 mr-4">
                                     <MessageSquare className="h-4 w-4 text-purple-500 ml-4 flex-shrink-0" />
@@ -698,20 +702,24 @@ export default function TopicsPage() {
                                     </div>
                                   </div>
                                   <div className="flex items-center space-x-1 flex-shrink-0">
-                                    <button
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => openEditModal('topic', { id: topic.id, content: topic.content, sort_order: topic.sort_order, category_id: topic.category_id, subcategory_id: topic.subcategory_id })}
-                                      className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded"
+                                      className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                                       title="编辑话题"
                                     >
                                       <Edit className="h-4 w-4" />
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => openDeleteModal(topic.id, 'topic')}
-                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                                       title="删除话题"
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                    </button>
+                                    </Button>
                                   </div>
                                 </div>
                               </div>
@@ -721,15 +729,17 @@ export default function TopicsPage() {
                           {/* 添加话题按钮 */}
                           <div className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)] pb-6">
                             <div className="pl-4 pt-3">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => openCreateModal('topic', category.id, subcategory.id)}
-                                className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors duration-150 rounded"
+                                className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                               >
                                 <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400">
                                   <Plus className="h-3 w-3 mr-1" />
                                   <span className="text-xs">添加话题</span>
                                 </div>
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         </>
@@ -740,15 +750,17 @@ export default function TopicsPage() {
                   {/* 添加小类按钮 */}
                   <div className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)] pb-6">
                     <div className="pl-4 pt-3">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => openCreateModal('subcategory', category.id)}
-                        className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-150 rounded"
+                        className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
                       >
                         <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
                           <Plus className="h-3 w-3 mr-1" />
                           <span className="text-xs">添加小类</span>
                         </div>
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </>
@@ -758,215 +770,138 @@ export default function TopicsPage() {
           
           {/* 添加大类按钮 */}
           <div className="m-4">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => openCreateModal('category')}
-              className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150 rounded"
+              className="px-3 py-2 border border-dashed border-gray-300 dark:border-[var(--border-color)] hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <div className="flex items-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
                 <Plus className="h-3 w-3 mr-1" />
                 <span className="text-xs">添加大类</span>
               </div>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* 创建模态框 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                {selectedLevel === 'category' && '新建大类'}
-                {selectedLevel === 'subcategory' && '新建小类'}
-                {selectedLevel === 'topic' && '新建话题'}
-              </h3>
-              
-              <form onSubmit={handleCreate} className="space-y-4">
-                {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        中文名称
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name_cn}
-                        onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        越南文名称
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name_vn}
-                        onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {selectedLevel === 'topic' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      话题内容
-                    </label>
-                    <textarea
-                      value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                      required
-                    />
-                  </div>
-                )}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title={
+          selectedLevel === 'category' ? '新建大类' :
+          selectedLevel === 'subcategory' ? '新建小类' : '新建话题'
+        }
+      >
+        <Form onSubmit={handleCreate}>
+          {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
+            <>
+              <Input
+                label="中文名称"
+                value={formData.name_cn}
+                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
+                required
+              />
+              <Input
+                label="越南文名称"
+                value={formData.name_vn}
+                onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
+                required
+              />
+            </>
+          )}
+          
+          {selectedLevel === 'topic' && (
+            <Textarea
+              label="话题内容"
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              rows={4}
+              required
+            />
+          )}
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
-                  >
-                    创建
-                  </button>
-                </div>
-              </form>
-            </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button variant="secondary" type="button" onClick={() => setShowCreateModal(false)}>
+              取消
+            </Button>
+            <Button type="submit">
+              创建
+            </Button>
           </div>
-        </div>
-      )}
+        </Form>
+      </Modal>
 
       {/* 编辑模态框 */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                {selectedLevel === 'category' && '编辑大类'}
-                {selectedLevel === 'subcategory' && '编辑小类'}
-                {selectedLevel === 'topic' && '编辑话题'}
-              </h3>
-              
-              <form onSubmit={handleEdit} className="space-y-4">
-                {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        中文名称
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name_cn}
-                        onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        越南文名称
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name_vn}
-                        onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {selectedLevel === 'topic' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      话题内容
-                    </label>
-                    <textarea
-                      value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                      required
-                    />
-                  </div>
-                )}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title={
+          selectedLevel === 'category' ? '编辑大类' :
+          selectedLevel === 'subcategory' ? '编辑小类' : '编辑话题'
+        }
+      >
+        <Form onSubmit={handleEdit}>
+          {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
+            <>
+              <Input
+                label="中文名称"
+                value={formData.name_cn}
+                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
+                required
+              />
+              <Input
+                label="越南文名称"
+                value={formData.name_vn}
+                onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
+                required
+              />
+            </>
+          )}
+          
+          {selectedLevel === 'topic' && (
+            <Textarea
+              label="话题内容"
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              rows={4}
+              required
+            />
+          )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    排序
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border-color)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[var(--component-background)] dark:text-white"
-                  />
-                </div>
+          <Input
+            label="排序"
+            type="number"
+            value={formData.sort_order}
+            onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+          />
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[var(--primary-blue)] hover:bg-[var(--primary-blue-hover)] text-white rounded-lg transition-colors"
-                  >
-                    保存
-                  </button>
-                </div>
-              </form>
-            </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button variant="secondary" type="button" onClick={() => setShowEditModal(false)}>
+              取消
+            </Button>
+            <Button type="submit">
+              保存
+            </Button>
           </div>
-        </div>
-      )}
+        </Form>
+      </Modal>
 
       {/* 删除确认模态框 */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-[var(--component-background)] rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">确认删除</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                确定要删除这个{deleteType === 'category' ? '大类' : deleteType === 'subcategory' ? '小类' : '话题'}吗？
-                {deleteType === 'category' && '这将同时删除其下的所有小类和话题。'}
-                {deleteType === 'subcategory' && '这将同时删除其下的所有话题。'}
-              </p>
-              
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[var(--accent-background)] rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--border-color)] transition-colors duration-150"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150"
-                >
-                  删除
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="确认删除"
+        message={`确定要删除这个${deleteType === 'category' ? '大类' : deleteType === 'subcategory' ? '小类' : '话题'}吗？${
+          deleteType === 'category' ? '这将同时删除其下的所有小类和话题。' :
+          deleteType === 'subcategory' ? '这将同时删除其下的所有话题。' : ''
+        }`}
+        confirmText="删除"
+        cancelText="取消"
+        type="danger"
+      />
     </div>
   )
 } 
