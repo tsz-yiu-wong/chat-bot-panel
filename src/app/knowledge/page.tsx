@@ -770,7 +770,7 @@ export default function KnowledgePage() {
       )}
 
       {/* 标签页切换 */}
-      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] mb-6">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] mb-6 neumorphic-subtle">
         <div className="flex">
           <button
             onClick={() => {
@@ -817,7 +817,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* 筛选和操作区域 */}
-      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6 neumorphic-subtle">
         {/* 分类筛选 */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
@@ -862,7 +862,7 @@ export default function KnowledgePage() {
             </div>
           </div>
           
-          <Button onClick={openCreateModal} className="flex items-center space-x-2">
+          <Button onClick={openCreateModal} neumorphic className="flex items-center space-x-2">
             <Plus className="w-4 h-4" />
             <span>创建{activeTab === 'abbreviations' ? '缩写' : '话术'}</span>
           </Button>
@@ -893,7 +893,7 @@ export default function KnowledgePage() {
             filteredAbbreviations.map((abbr) => (
               <div 
                 key={abbr.id} 
-                className="group bg-white dark:bg-[var(--component-background)] rounded-xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md"
+                className="group bg-white dark:bg-[var(--component-background)] rounded-xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md neumorphic-subtle"
               >
                 <div className="p-4">
                   <div className="flex items-center justify-between">
@@ -950,13 +950,13 @@ export default function KnowledgePage() {
             filteredScripts.map((script) => (
               <div 
                 key={script.id} 
-                className="group bg-white dark:bg-[var(--component-background)] rounded-xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md"
+                className="group bg-white dark:bg-[var(--component-background)] rounded-xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-md neumorphic-subtle"
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-3 mb-4">
-                        <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex-shrink-0">
                           {script.scenario}
                         </span>
                       </div>
@@ -1078,7 +1078,7 @@ export default function KnowledgePage() {
             >
               取消
             </Button>
-            <Button type="submit">
+            <Button type="submit" neumorphic>
               保存
             </Button>
           </div>
@@ -1179,7 +1179,7 @@ export default function KnowledgePage() {
             >
               取消
             </Button>
-            <Button type="submit">
+            <Button type="submit" neumorphic>
               {showCreateModal ? '创建' : '保存'}
             </Button>
           </div>

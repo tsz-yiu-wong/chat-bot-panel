@@ -565,7 +565,7 @@ export default function TopicsPage() {
       </div>
 
       {/* 分类树 */}
-      <div className="bg-white dark:bg-[var(--component-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)]">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)] neumorphic-subtle">
         <div className="p-4 border-b border-gray-200 dark:border-[var(--border-color)]">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">分类结构</h2>
         </div>
@@ -574,7 +574,7 @@ export default function TopicsPage() {
             <div key={category.id}>
               {/* 大类 */}
               <div 
-                className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
+                className="group p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
                 onMouseDown={handleMouseDown}
                 onClick={(e) => handleToggleClick(() => toggleCategory(category.id), e)}
               >
@@ -600,7 +600,7 @@ export default function TopicsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="action-buttons action-buttons-hover flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -629,7 +629,7 @@ export default function TopicsPage() {
                   {category.subcategories.map((subcategory) => (
                     <div key={subcategory.id} className="ml-6 border-l border-gray-200 dark:border-[var(--border-color)]">
                       <div 
-                        className="p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
+                        className="group p-4 hover:bg-gray-50 dark:hover:bg-[var(--accent-background)] transition-colors duration-150 hover:shadow-sm"
                         onMouseDown={handleMouseDown}
                         onClick={(e) => handleToggleClick(() => toggleSubcategory(subcategory.id), e)}
                       >
@@ -654,7 +654,7 @@ export default function TopicsPage() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="action-buttons action-buttons-hover flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -684,7 +684,7 @@ export default function TopicsPage() {
                             <div 
                               key={topic.id} 
                               id={`topic-${topic.id}`}
-                              className={`ml-6 border-l border-gray-200 dark:border-[var(--border-color)] ${
+                              className={`group ml-6 border-l border-gray-200 dark:border-[var(--border-color)] ${
                                 highlightedTopicId === topic.id ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                               }`}
                             >
@@ -701,7 +701,7 @@ export default function TopicsPage() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center space-x-1 flex-shrink-0">
+                                  <div className="action-buttons action-buttons-hover flex-shrink-0">
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -826,7 +826,7 @@ export default function TopicsPage() {
             <Button variant="secondary" type="button" onClick={() => setShowCreateModal(false)}>
               取消
             </Button>
-            <Button type="submit">
+            <Button type="submit" neumorphic>
               创建
             </Button>
           </div>
@@ -881,7 +881,7 @@ export default function TopicsPage() {
             <Button variant="secondary" type="button" onClick={() => setShowEditModal(false)}>
               取消
             </Button>
-            <Button type="submit">
+            <Button type="submit" neumorphic>
               保存
             </Button>
           </div>

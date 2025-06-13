@@ -122,7 +122,7 @@ export function VectorTestComponent() {
   }
 
   return (
-    <div className="p-6 bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)]">
+    <div className="p-6 bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] neumorphic-subtle">
       <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">向量检索测试</h3>
       
       <div className="space-y-4 mb-6">
@@ -137,6 +137,7 @@ export function VectorTestComponent() {
           <Button 
             onClick={handleSearch}
             disabled={loading || !query.trim() || !!thresholdError}
+            neumorphic
           >
             {loading ? '检索中...' : '检索'}
           </Button>
@@ -169,6 +170,7 @@ export function VectorTestComponent() {
           onClick={getVectorStats}
           variant="secondary"
           className="text-sm"
+          neumorphic
         >
           查看向量统计
         </Button>

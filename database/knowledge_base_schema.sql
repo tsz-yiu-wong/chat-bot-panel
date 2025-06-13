@@ -1,6 +1,12 @@
+-- 知识库模块数据库结构
+-- 包含缩写库、话术库和向量搜索功能
+
+-- ===== 基础扩展 =====
 -- 启用 pgvector 扩展
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ===== 核心表结构 =====
 -- 创建缩写库表
 CREATE TABLE IF NOT EXISTS knowledge_abbreviations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -34,7 +40,8 @@ CREATE TABLE IF NOT EXISTS knowledge_vectors (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 创建索引以提高向量搜索性能
+-- ===== 索引优化 =====
+-- 创建向量搜索索引
 CREATE INDEX IF NOT EXISTS knowledge_vectors_embedding_idx 
 ON knowledge_vectors USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
@@ -53,6 +60,32 @@ CREATE INDEX IF NOT EXISTS knowledge_abbreviations_abbreviation_idx ON knowledge
 
 -- 创建话术库索引
 CREATE INDEX IF NOT EXISTS knowledge_scripts_scenario_idx ON knowledge_scripts (scenario);
+
+-- ===== 函数定义 =====
+-- 更新时间戳触发器函数
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- 为各表创建更新时间触发器
+DROP TRIGGER IF EXISTS update_knowledge_abbreviations_updated_at ON knowledge_abbreviations;
+CREATE TRIGGER update_knowledge_abbreviations_updated_at 
+    BEFORE UPDATE ON knowledge_abbreviations 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_knowledge_scripts_updated_at ON knowledge_scripts;
+CREATE TRIGGER update_knowledge_scripts_updated_at 
+    BEFORE UPDATE ON knowledge_scripts 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_knowledge_vectors_updated_at ON knowledge_vectors;
+CREATE TRIGGER update_knowledge_vectors_updated_at 
+    BEFORE UPDATE ON knowledge_vectors 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- 创建相似性搜索函数
 CREATE OR REPLACE FUNCTION match_documents(

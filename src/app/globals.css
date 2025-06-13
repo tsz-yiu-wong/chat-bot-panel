@@ -44,3 +44,53 @@ body {
 .border-l-3 {
   border-left-width: 3px;
 }
+
+/* Neumorphism 效果类 */
+.neumorphic {
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.1),
+    -6px -6px 12px rgba(255, 255, 255, 0.8);
+}
+
+.dark .neumorphic {
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.3),
+    -6px -6px 12px rgba(255, 255, 255, 0.05);
+}
+
+.neumorphic-pressed {
+  box-shadow: 
+    inset 3px 3px 6px rgba(0, 0, 0, 0.1),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+}
+
+.dark .neumorphic-pressed {
+  box-shadow: 
+    inset 3px 3px 6px rgba(0, 0, 0, 0.3),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.05);
+}
+
+.neumorphic-subtle {
+  box-shadow: 
+    3px 3px 6px rgba(0, 0, 0, 0.08),
+    -3px -3px 6px rgba(255, 255, 255, 0.6);
+}
+
+.dark .neumorphic-subtle {
+  box-shadow: 
+    3px 3px 6px rgba(0, 0, 0, 0.2),
+    -3px -3px 6px rgba(255, 255, 255, 0.03);
+}
+
+/* 统一的操作按钮组样式 */
+.action-buttons {
+  @apply flex items-center space-x-1 transition-opacity duration-200;
+}
+
+.action-buttons-hover {
+  @apply opacity-0 group-hover:opacity-100;
+}
+
+.action-buttons-visible {
+  @apply opacity-100;
+}

@@ -463,7 +463,7 @@ export default function PromptsPage() {
       <PageHeader 
         title="系统提示词"
         action={
-          <Button onClick={handleOpenCreateModal}>
+          <Button onClick={handleOpenCreateModal} neumorphic>
             <Plus className="w-4 h-4 mr-2" />
             创建提示词
           </Button>
@@ -471,7 +471,7 @@ export default function PromptsPage() {
       />
 
       {/* 筛选器 */}
-      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6">
+      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6 neumorphic-subtle">
         <div className="space-y-4">
           {/* 阶段筛选 */}
           <FilterTabs
@@ -506,7 +506,7 @@ export default function PromptsPage() {
           {filteredPrompts.map((prompt) => (
             <div 
               key={prompt.id} 
-              className="group bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-lg"
+              className="group bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 hover:shadow-lg neumorphic-subtle"
             >
               {/* 头部信息 */}
               <div className="flex items-center justify-between p-6 pb-4">
@@ -657,7 +657,7 @@ export default function PromptsPage() {
             <Button variant="secondary" type="button" onClick={handleCloseModal}>
               取消
             </Button>
-            <Button type="submit">
+            <Button type="submit" neumorphic>
               {showCreateModal ? '创建' : '保存'}
             </Button>
           </div>
