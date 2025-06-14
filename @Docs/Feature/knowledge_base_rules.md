@@ -307,4 +307,39 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
   "openai": "^4.x.x",
   "@supabase/supabase-js": "^2.x.x"
 }
-``` 
+```
+
+## 技术债务和修复记录
+
+### 时间戳问题修复（2024年修复）
+
+**问题描述**：
+在知识库更新内容时，knowledge数据库和向量化数据库中的`created_at`和`updated_at`都会被更新，违背了时间戳的语义。
+
+**问题根源**：
+1. 更新知识库内容时，触发器会删除旧的向量记录并重新插入新的向量记录
+2. 新插入的向量记录会自动设置`created_at = NOW()`
+3. 这导致原始创建时间丢失
+
+**解决方案**：
+1. 创建了带时间戳参数的向量生成函数：
+   - `create_abbreviation_vectors_with_timestamp()`
+   - `create_script_vectors_with_timestamp()`
+
+2. 修改了自动向量化触发器：
+   - 在删除前获取原始的`created_at`时间戳
+   - 在重新插入时保留原始的`created_at`
+   - 确保只有`updated_at`被更新为当前时间
+
+3. 保持向后兼容性：
+   - 原有函数仍然可用，内部调用新的带时间戳版本
+   - 现有代码无需修改
+
+**修复后的行为**：
+- **创建**：`created_at`和`updated_at`都设置为当前时间
+- **更新**：`created_at`保持不变，`updated_at`更新为当前时间
+
+**相关文件**：
+- `database/knowledge_base_schema.sql` - 数据库函数和触发器修复
+- 触发器函数：`auto_vectorize_abbreviation()`, `auto_vectorize_script()`
+- 向量生成函数：`create_*_vectors_with_timestamp()` 

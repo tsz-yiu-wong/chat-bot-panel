@@ -9,7 +9,7 @@ const openai = new OpenAI({
 // 搜索相似文档
 export async function POST(request: NextRequest) {
   try {
-    const { query, limit = 5, similarity_threshold = 0.1 } = await request.json()
+    const { query, limit = 5, similarity_threshold = 0.1, document_type } = await request.json()
     
     if (!query) {
       return NextResponse.json(
@@ -27,10 +27,15 @@ export async function POST(request: NextRequest) {
 
     const queryEmbedding = embeddingResponse.data[0].embedding
 
-    // 2. 在数据库中搜索相似向量
-    const { data: vectors, error: vectorError } = await supabase
-      .from('knowledge_vectors')
-      .select('*')
+    // 2. 在数据库中搜索相似向量，根据document_type过滤
+    let vectorQuery = supabase.from('knowledge_vectors').select('*')
+    
+    // 如果指定了document_type，则过滤
+    if (document_type && ['abbreviation', 'script'].includes(document_type)) {
+      vectorQuery = vectorQuery.eq('document_type', document_type)
+    }
+    
+    const { data: vectors, error: vectorError } = await vectorQuery
 
     if (vectorError) throw vectorError
 
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
     let processed = 0
     let aboveThreshold = 0
     
-    console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}`)
+    console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}${document_type ? `，文档类型: ${document_type}` : ''}`)
     
     for (const vector of vectors) {
       try {
@@ -174,6 +179,7 @@ export async function POST(request: NextRequest) {
       debug: {
         similarity_threshold,
         query,
+        document_type: document_type || 'all',
         found_above_threshold: results.length
       }
     })

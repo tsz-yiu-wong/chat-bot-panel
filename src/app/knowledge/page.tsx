@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { VectorTestComponent } from './test-vector'
 import { supabase } from '@/lib/supabase'
-import { storeDocumentVector, deleteDocumentVector } from '@/lib/vector'
+import { updateKnowledgeVectors, deleteKnowledgeVectors } from '@/lib/vector'
 
 // 类型定义
 interface Abbreviation {
@@ -219,6 +219,7 @@ export default function KnowledgePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string>('')
+  const [deleting, setDeleting] = useState(false)
   const [showTestPanel, setShowTestPanel] = useState(false)
   
   // 表单状态
@@ -304,6 +305,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -333,6 +335,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_scripts')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -359,6 +362,39 @@ export default function KnowledgePage() {
   // 创建缩写
   async function handleCreateAbbreviation(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 生成临时ID用于乐观更新
+    const tempId = `temp-${Date.now()}`
+    const optimisticAbbreviation: Abbreviation = {
+      id: tempId,
+      category: abbreviationForm.category,
+      abbreviation: abbreviationForm.abbreviation,
+      full_form: abbreviationForm.full_form,
+      description: abbreviationForm.description || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    // 保存原始状态用于错误回滚
+    const originalAbbreviations = [...abbreviations]
+    const originalCategories = [...abbreviationCategories]
+    
+    // 乐观更新：立即更新UI
+    setAbbreviations([optimisticAbbreviation, ...abbreviations])
+    
+    // 如果是新分类，立即更新分类列表
+    const isNewCategory = !abbreviationCategories.includes(abbreviationForm.category)
+    if (isNewCategory) {
+      const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
+      const sortedCategories = [...filteredCategories, abbreviationForm.category]
+        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
+      setAbbreviationCategories([...sortedCategories, '其他'])
+    }
+    
+    // 关闭模态框并重置表单
+    setShowCreateModal(false)
+    setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
+
     try {
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
@@ -373,44 +409,80 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
-        // 异步生成和存储向量
+        // 替换临时记录为真实记录
+        setAbbreviations(prev => prev.map(a => a.id === tempId ? data[0] : a))
+        
+        // 异步更新向量 - 利用数据库触发器 + OpenAI API
         try {
-          const vectorContent = `${abbreviationForm.abbreviation} - ${abbreviationForm.full_form} - ${abbreviationForm.description || ''}`
-          await storeDocumentVector(
+          await updateKnowledgeVectors(
             data[0].id,
-            vectorContent,
+            'abbreviation',
             {
-              category: abbreviationForm.category,
               abbreviation: abbreviationForm.abbreviation,
               full_form: abbreviationForm.full_form,
-              type: 'abbreviation'
+              description: abbreviationForm.description,
+              category: abbreviationForm.category
             }
           )
         } catch (vectorError) {
           console.error('Vector storage failed:', vectorError)
         }
-        
-        setAbbreviations([data[0], ...abbreviations])
-        
-        // 如果是新分类，更新分类列表
-        if (!abbreviationCategories.includes(abbreviationForm.category)) {
-          const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
-          const sortedCategories = [...filteredCategories, abbreviationForm.category]
-            .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-          setAbbreviationCategories([...sortedCategories, '其他'])
-        }
       }
-
-      setShowCreateModal(false)
-      setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
     } catch (err) {
+      // 失败时回滚状态
+      setAbbreviations(originalAbbreviations)
+      if (isNewCategory) {
+        setAbbreviationCategories(originalCategories)
+      }
       setError(err instanceof Error ? err.message : '创建缩写失败')
+      
+      // 重新打开模态框并恢复表单数据
+      setAbbreviationForm({
+        id: '',
+        category: optimisticAbbreviation.category,
+        abbreviation: optimisticAbbreviation.abbreviation,
+        full_form: optimisticAbbreviation.full_form,
+        description: optimisticAbbreviation.description || ''
+      })
+      setShowCreateModal(true)
     }
   }
 
   // 创建话术
   async function handleCreateScript(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 生成临时ID用于乐观更新
+    const tempId = `temp-${Date.now()}`
+    const optimisticScript: ConversationScript = {
+      id: tempId,
+      scenario: scriptForm.scenario,
+      text: scriptForm.text,
+      answer: scriptForm.answer,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    // 保存原始状态用于错误回滚
+    const originalScripts = [...scripts]
+    const originalScenarios = [...scriptScenarios]
+    
+    // 乐观更新：立即更新UI
+    setScripts([optimisticScript, ...scripts])
+    
+    // 如果是新场景，立即更新场景列表
+    const isNewScenario = !scriptScenarios.includes(scriptForm.scenario)
+    if (isNewScenario) {
+      const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
+      const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
+        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
+      setScriptScenarios([...sortedScenarios, '其他'])
+    }
+    
+    // 关闭模态框并重置表单
+    setShowCreateModal(false)
+    setScriptForm(DEFAULT_SCRIPT_FORM)
+
     try {
       const { data, error } = await supabase
         .from('knowledge_scripts')
@@ -424,42 +496,75 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
-        // 异步生成和存储向量
+        // 替换临时记录为真实记录
+        setScripts(prev => prev.map(s => s.id === tempId ? data[0] : s))
+        
+        // 异步更新向量 - 利用数据库触发器 + OpenAI API
         try {
-          const vectorContent = `用户: ${scriptForm.text} | 回答: ${scriptForm.answer}`
-          await storeDocumentVector(
+          await updateKnowledgeVectors(
             data[0].id,
-            vectorContent,
+            'script',
             {
               scenario: scriptForm.scenario,
-              type: 'script'
+              text: scriptForm.text,
+              answer: scriptForm.answer
             }
           )
         } catch (vectorError) {
           console.error('Vector storage failed:', vectorError)
         }
-        
-        setScripts([data[0], ...scripts])
-        
-        // 如果是新场景，更新场景列表
-        if (!scriptScenarios.includes(scriptForm.scenario)) {
-          const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
-          const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
-            .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-          setScriptScenarios([...sortedScenarios, '其他'])
-        }
       }
-
-      setShowCreateModal(false)
-      setScriptForm(DEFAULT_SCRIPT_FORM)
     } catch (err) {
+      // 失败时回滚状态
+      setScripts(originalScripts)
+      if (isNewScenario) {
+        setScriptScenarios(originalScenarios)
+      }
       setError(err instanceof Error ? err.message : '创建话术失败')
+      
+      // 重新打开模态框并恢复表单数据
+      setScriptForm({
+        id: '',
+        scenario: optimisticScript.scenario,
+        text: optimisticScript.text,
+        answer: optimisticScript.answer
+      })
+      setShowCreateModal(true)
     }
   }
 
   // 编辑缩写
   async function handleEditAbbreviation(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 乐观更新：立即更新本地状态
+    const optimisticAbbreviation = {
+      ...abbreviations.find(a => a.id === abbreviationForm.id)!,
+      category: abbreviationForm.category,
+      abbreviation: abbreviationForm.abbreviation,
+      full_form: abbreviationForm.full_form,
+      description: abbreviationForm.description || null,
+      updated_at: new Date().toISOString()
+    }
+    const originalAbbreviations = [...abbreviations]
+    
+    // 立即更新UI
+    setAbbreviations(abbreviations.map(a => a.id === abbreviationForm.id ? optimisticAbbreviation : a))
+    
+    // 如果是新分类，立即更新分类列表
+    const isNewCategory = !abbreviationCategories.includes(abbreviationForm.category)
+    const originalCategories = [...abbreviationCategories]
+    if (isNewCategory) {
+      const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
+      const sortedCategories = [...filteredCategories, abbreviationForm.category]
+        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
+      setAbbreviationCategories([...sortedCategories, '其他'])
+    }
+    
+    // 关闭模态框
+    setShowEditModal(false)
+    setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
+
     try {
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
@@ -475,44 +580,75 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
-        // 更新向量
+        // 更新所有相关向量 - 数据库触发器会重新生成向量记录，我们需要更新embedding
         try {
-          const vectorContent = `${abbreviationForm.abbreviation} - ${abbreviationForm.full_form} - ${abbreviationForm.description || ''}`
-          await storeDocumentVector(
+          await updateKnowledgeVectors(
             data[0].id,
-            vectorContent,
+            'abbreviation',
             {
-              category: abbreviationForm.category,
               abbreviation: abbreviationForm.abbreviation,
               full_form: abbreviationForm.full_form,
-              type: 'abbreviation'
+              description: abbreviationForm.description,
+              category: abbreviationForm.category
             }
           )
         } catch (vectorError) {
           console.error('Vector update failed:', vectorError)
         }
         
+        // 成功后更新为真实数据
         setAbbreviations(abbreviations.map(a => a.id === abbreviationForm.id ? data[0] : a))
-        
-        // 如果是新分类，更新分类列表
-        if (!abbreviationCategories.includes(abbreviationForm.category)) {
-          const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
-          const sortedCategories = [...filteredCategories, abbreviationForm.category]
-            .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-          setAbbreviationCategories([...sortedCategories, '其他'])
-        }
       }
-
-      setShowEditModal(false)
-      setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
     } catch (err) {
+      // 失败时回滚状态
+      setAbbreviations(originalAbbreviations)
+      if (isNewCategory) {
+        setAbbreviationCategories(originalCategories)
+      }
       setError(err instanceof Error ? err.message : '编辑缩写失败')
+      // 重新打开模态框
+      setAbbreviationForm({
+        id: optimisticAbbreviation.id,
+        category: optimisticAbbreviation.category,
+        abbreviation: optimisticAbbreviation.abbreviation,
+        full_form: optimisticAbbreviation.full_form,
+        description: optimisticAbbreviation.description || ''
+      })
+      setShowEditModal(true)
     }
   }
 
   // 编辑话术
   async function handleEditScript(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 乐观更新：立即更新本地状态
+    const optimisticScript = {
+      ...scripts.find(s => s.id === scriptForm.id)!,
+      scenario: scriptForm.scenario,
+      text: scriptForm.text,
+      answer: scriptForm.answer,
+      updated_at: new Date().toISOString()
+    }
+    const originalScripts = [...scripts]
+    
+    // 立即更新UI
+    setScripts(scripts.map(s => s.id === scriptForm.id ? optimisticScript : s))
+    
+    // 如果是新场景，立即更新场景列表
+    const isNewScenario = !scriptScenarios.includes(scriptForm.scenario)
+    const originalScenarios = [...scriptScenarios]
+    if (isNewScenario) {
+      const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
+      const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
+        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
+      setScriptScenarios([...sortedScenarios, '其他'])
+    }
+    
+    // 关闭模态框
+    setShowEditModal(false)
+    setScriptForm(DEFAULT_SCRIPT_FORM)
+
     try {
       const { data, error } = await supabase
         .from('knowledge_scripts')
@@ -527,80 +663,109 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
-        // 更新向量
+        // 更新所有相关向量 - 数据库触发器会重新生成向量记录，我们需要更新embedding
         try {
-          const vectorContent = `用户: ${scriptForm.text} | 回答: ${scriptForm.answer}`
-          await storeDocumentVector(
+          await updateKnowledgeVectors(
             data[0].id,
-            vectorContent,
+            'script',
             {
               scenario: scriptForm.scenario,
-              type: 'script'
+              text: scriptForm.text,
+              answer: scriptForm.answer
             }
           )
         } catch (vectorError) {
           console.error('Vector update failed:', vectorError)
         }
         
+        // 成功后更新为真实数据
         setScripts(scripts.map(s => s.id === scriptForm.id ? data[0] : s))
-        
-        // 如果是新场景，更新场景列表
-        if (!scriptScenarios.includes(scriptForm.scenario)) {
-          const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
-          const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
-            .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-          setScriptScenarios([...sortedScenarios, '其他'])
-        }
       }
-
-      setShowEditModal(false)
-      setScriptForm(DEFAULT_SCRIPT_FORM)
     } catch (err) {
+      // 失败时回滚状态
+      setScripts(originalScripts)
+      if (isNewScenario) {
+        setScriptScenarios(originalScenarios)
+      }
       setError(err instanceof Error ? err.message : '编辑话术失败')
+      // 重新打开模态框
+      setScriptForm({
+        id: optimisticScript.id,
+        scenario: optimisticScript.scenario,
+        text: optimisticScript.text,
+        answer: optimisticScript.answer
+      })
+      setShowEditModal(true)
     }
   }
 
-  // 删除处理
+  // 删除处理 - 改为软删除
   async function handleDelete() {
+    setDeleting(true)
+    
+    // 乐观更新：立即从UI中移除
+    const originalAbbreviations = [...abbreviations]
+    const originalScripts = [...scripts]
+    
+    if (activeTab === 'abbreviations') {
+      setAbbreviations(abbreviations.filter(a => a.id !== deleteId))
+    } else {
+      setScripts(scripts.filter(s => s.id !== deleteId))
+    }
+    
+    // 关闭模态框
+    setShowDeleteModal(false)
+    const currentDeleteId = deleteId
+    setDeleteId('')
+    
     try {
       if (activeTab === 'abbreviations') {
+        // 软删除缩写记录
         const { error } = await supabase
           .from('knowledge_abbreviations')
-          .delete()
-          .eq('id', deleteId)
+          .update({ is_deleted: true })
+          .eq('id', currentDeleteId)
 
         if (error) throw error
         
-        // 删除对应的向量
+        // 删除所有相关向量 - 硬删除向量数据
         try {
-          await deleteDocumentVector(deleteId, 'abbreviation')
+          await deleteKnowledgeVectors(currentDeleteId, 'abbreviation')
         } catch (vectorError) {
           console.error('Vector deletion failed:', vectorError)
+          // 向量删除失败不影响主要删除操作
         }
-        
-        setAbbreviations(abbreviations.filter(a => a.id !== deleteId))
       } else {
+        // 软删除话术记录
         const { error } = await supabase
           .from('knowledge_scripts')
-          .delete()
-          .eq('id', deleteId)
+          .update({ is_deleted: true })
+          .eq('id', currentDeleteId)
 
         if (error) throw error
         
-        // 删除对应的向量
+        // 删除所有相关向量 - 硬删除向量数据
         try {
-          await deleteDocumentVector(deleteId, 'script')
+          await deleteKnowledgeVectors(currentDeleteId, 'script')
         } catch (vectorError) {
           console.error('Vector deletion failed:', vectorError)
+          // 向量删除失败不影响主要删除操作
         }
-        
-        setScripts(scripts.filter(s => s.id !== deleteId))
       }
-
-      setShowDeleteModal(false)
-      setDeleteId('')
     } catch (err) {
+      // 失败时回滚状态
+      if (activeTab === 'abbreviations') {
+        setAbbreviations(originalAbbreviations)
+      } else {
+        setScripts(originalScripts)
+      }
       setError(err instanceof Error ? err.message : '删除失败')
+      
+      // 重新打开删除模态框
+      setDeleteId(currentDeleteId)
+      setShowDeleteModal(true)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -752,22 +917,7 @@ export default function KnowledgePage() {
     <div className="p-6 max-w-7xl mx-auto">
       <PageHeader 
         title="知识库"
-        action={
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowTestPanel(!showTestPanel)}
-          >
-            向量检索测试
-          </Button>
-        }
       />
-
-      {/* 向量测试面板 */}
-      {showTestPanel && (
-        <div className="mb-6">
-          <VectorTestComponent />
-        </div>
-      )}
 
       {/* 标签页切换 */}
       <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] mb-6 neumorphic-subtle">
@@ -816,13 +966,34 @@ export default function KnowledgePage() {
         </div>
       </div>
 
+      {/* 创建按钮区域 */}
+      <div className="flex justify-between items-center mb-6">
+        <Button 
+          variant="secondary" 
+          onClick={() => setShowTestPanel(!showTestPanel)}
+        >
+          {showTestPanel ? '隐藏' : '显示'}向量检索测试
+        </Button>
+        <Button onClick={openCreateModal} neumorphic className="flex items-center space-x-2">
+          <Plus className="w-4 h-4" />
+          <span>创建{activeTab === 'abbreviations' ? '缩写' : '话术'}</span>
+        </Button>
+      </div>
+
+      {/* 向量测试面板 */}
+      {showTestPanel && (
+        <div className="mb-6">
+          <VectorTestComponent activeTab={activeTab} />
+        </div>
+      )}
+
       {/* 筛选和操作区域 */}
       <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6 neumorphic-subtle">
         {/* 分类筛选 */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">筛选：</span>
-            <div className="flex flex-wrap gap-2">
+        <div className="mb-4">
+          <div className="flex items-start space-x-3 mb-3">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">筛选：</span>
+            <div className="flex flex-wrap gap-2 flex-1">
               <button
                 onClick={() => setSelectedCategory('all')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
@@ -861,11 +1032,6 @@ export default function KnowledgePage() {
               ))}
             </div>
           </div>
-          
-          <Button onClick={openCreateModal} neumorphic className="flex items-center space-x-2">
-            <Plus className="w-4 h-4" />
-            <span>创建{activeTab === 'abbreviations' ? '缩写' : '话术'}</span>
-          </Button>
         </div>
 
         {/* 搜索和统计 */}
@@ -956,7 +1122,7 @@ export default function KnowledgePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-3 mb-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex-shrink-0">
+                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
                           {script.scenario}
                         </span>
                       </div>
@@ -1196,7 +1362,7 @@ export default function KnowledgePage() {
         onConfirm={handleDelete}
         title="确认删除"
         message={`确定要删除这个${activeTab === 'abbreviations' ? '缩写' : '话术'}吗？此操作无法撤销。`}
-        confirmText="删除"
+        confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
       />

@@ -58,6 +58,7 @@ export default function BotsPage() {
   
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -148,26 +149,60 @@ export default function BotsPage() {
     }
   }
 
-  // 删除机器人
+  // 删除机器人 - 改为软删除，支持乐观更新
   const handleDeleteBot = async () => {
     if (!deleteId) return
 
+    // 保存原始状态用于错误回滚
+    const originalPersonalities = [...personalities]
+    
+    // 乐观更新：立即从UI中移除
+    setPersonalities(prev => prev.filter(p => p.id !== deleteId))
+    
+    // 如果删除的是当前选中的机器人，清空选中状态
+    if (selectedBotId === deleteId) {
+      setSelectedBotId('')
+      setCurrentBot({ bot_name: '' })
+    }
+    
+    // 关闭模态框
+    setShowDeleteModal(false)
+    const currentDeleteId = deleteId
+    setDeleteId('')
+    
+    setDeleting(true)
+    
     try {
-      const response = await fetch(`/api/bot-personality?id=${deleteId}`, {
+      const response = await fetch(`/api/bot-personality?id=${currentDeleteId}`, {
         method: 'DELETE'
       })
 
-      if (response.ok) {
-        await loadPersonalities()
-        if (selectedBotId === deleteId) {
-          setSelectedBotId('')
-          setCurrentBot({ bot_name: '' })
-        }
-        setShowDeleteModal(false)
-        setDeleteId('')
+      if (!response.ok) {
+        throw new Error('删除操作失败')
       }
     } catch (error) {
       console.error('Error deleting bot:', error)
+      
+      // 失败时回滚状态
+      setPersonalities(originalPersonalities)
+      
+      // 如果删除的是当前选中的机器人，恢复选中状态
+      if (selectedBotId === currentDeleteId || !selectedBotId) {
+        setSelectedBotId(currentDeleteId)
+        const restoredBot = originalPersonalities.find(p => p.id === currentDeleteId)
+        if (restoredBot) {
+          setCurrentBot(restoredBot)
+          await loadImages(currentDeleteId)
+        }
+      }
+      
+      // 重新打开删除模态框
+      setDeleteId(currentDeleteId)
+      setShowDeleteModal(true)
+      
+      alert('删除失败，请稍后重试')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -176,11 +211,18 @@ export default function BotsPage() {
     setCurrentBot(prev => ({ ...prev, [fieldKey]: value }))
   }
 
-  // 保存当前机器人数据
+  // 保存当前机器人数据 - 使用乐观更新
   const savePersonality = async () => {
     if (!currentBot.bot_name.trim() || !selectedBotId) return
 
+    // 乐观更新：立即更新本地状态
+    const optimisticBot = { ...currentBot, id: selectedBotId }
+    const originalPersonalities = [...personalities]
+    
+    // 立即更新UI
+    setPersonalities(prev => prev.map(p => p.id === selectedBotId ? optimisticBot : p))
     setSaving(true)
+
     try {
       const response = await fetch('/api/bot-personality', {
         method: 'PUT',
@@ -189,11 +231,18 @@ export default function BotsPage() {
       })
 
       if (response.ok) {
+        // 成功后重新加载确保数据一致性
         await loadPersonalities()
         alert('保存成功！')
+      } else {
+        // 失败时回滚状态
+        setPersonalities(originalPersonalities)
+        alert('保存失败，请稍后重试')
       }
     } catch (error) {
       console.error('Error saving personality:', error)
+      // 失败时回滚状态
+      setPersonalities(originalPersonalities)
       alert('保存失败，请稍后重试')
     } finally {
       setSaving(false)
@@ -297,10 +346,11 @@ export default function BotsPage() {
                             setDeleteId(selectedBotId)
                             setShowDeleteModal(true)
                           }}
+                          disabled={deleting}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          删除
+                          {deleting ? '删除中...' : '删除'}
                         </Button>
                         
                         <Button

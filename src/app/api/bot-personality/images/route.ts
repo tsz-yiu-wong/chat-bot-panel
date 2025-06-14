@@ -25,7 +25,7 @@ function createSupabaseServer() {
   );
 }
 
-// GET - 获取机器人的图片（RLS禁用期间不限制用户）
+// GET - 获取机器人的图片（过滤软删除记录）
 export async function GET(request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
@@ -38,11 +38,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Bot ID is required' }, { status: 400 });
     }
 
-    // 获取图片列表
+    // 获取图片列表 - 过滤软删除记录
     let query = supabase
       .from('bot_images')
       .select('*')
       .eq('bot_id', botId)
+      .eq('is_deleted', false)
       .order('sort_order', { ascending: true });
 
     if (imageType) {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - 删除图片
+// DELETE - 软删除图片
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
@@ -150,32 +151,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
     }
 
-    // 获取图片信息
-    const { data: image, error: imageError } = await supabase
-      .from('bot_images')
-      .select('*')
-      .eq('id', imageId)
-      .single();
-
-    if (imageError || !image) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
-    }
-
-    // 从Storage删除文件
-    const fileName = image.image_url.split('/').slice(-3).join('/'); // 获取相对路径
-
-    const { error: storageError } = await supabase.storage
-      .from('bot-images')
-      .remove([fileName]);
-
-    if (storageError) {
-      console.error('Storage delete error:', storageError);
-    }
-
-    // 从数据库删除记录
+    // 软删除图片记录 - 保留文件，只标记删除状态
     const { error: dbError } = await supabase
       .from('bot_images')
-      .delete()
+      .update({ is_deleted: true })
       .eq('id', imageId);
 
     if (dbError) {

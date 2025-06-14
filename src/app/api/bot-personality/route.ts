@@ -29,17 +29,17 @@ function createSupabaseServer() {
 // 临时用户ID（RLS禁用期间使用）
 const TEMP_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-// GET - 获取所有机器人人设（RLS禁用期间不限制用户）
+// GET - 获取所有机器人人设（过滤软删除记录）
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
 
-    // 获取机器人人设列表
+    // 获取机器人人设列表 - 过滤软删除记录
     const { data: personalities, error } = await supabase
       .from('bot_personalities')
       .select('*')
-      .eq('is_active', true)
+      .eq('is_deleted', false)
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -138,15 +138,26 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
-    // 软删除（设置is_active为false）
+    // 软删除 - 使用统一的is_deleted字段
     const { error } = await supabase
       .from('bot_personalities')
-      .update({ is_active: false })
+      .update({ is_deleted: true })
       .eq('id', id);
 
     if (error) {
       console.error('Database error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // 同时软删除关联的图片
+    const { error: imageError } = await supabase
+      .from('bot_images')
+      .update({ is_deleted: true })
+      .eq('bot_id', id);
+
+    if (imageError) {
+      console.error('Error soft deleting images:', imageError);
+      // 图片删除失败不影响主要删除操作，只记录日志
     }
 
     return NextResponse.json({ message: 'Personality deleted successfully' });

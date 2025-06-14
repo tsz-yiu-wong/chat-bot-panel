@@ -39,6 +39,49 @@ export async function storeDocumentVector(
   }
 }
 
+// 更新知识库记录的所有向量（与数据库触发器协同工作）
+export async function updateKnowledgeVectors(
+  documentId: string,
+  documentType: 'abbreviation' | 'script',
+  data: {
+    // 缩写数据
+    abbreviation?: string
+    full_form?: string
+    description?: string
+    category?: string
+    // 话术数据
+    scenario?: string
+    text?: string
+    answer?: string
+  }
+) {
+  try {
+    const response = await fetch('/api/vectorize/knowledge', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        documentId,
+        documentType,
+        data
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || '向量更新失败')
+    }
+
+    const result = await response.json()
+    console.log(result.message)
+    return result
+  } catch (error) {
+    console.error('Error updating knowledge vectors:', error)
+    throw error
+  }
+}
+
 // 删除文档向量
 export async function deleteDocumentVector(
   documentId: string, 
@@ -58,6 +101,30 @@ export async function deleteDocumentVector(
     console.log(result.message)
   } catch (error) {
     console.error('Error deleting document vector:', error)
+    throw error
+  }
+}
+
+// 删除知识库记录的所有向量
+export async function deleteKnowledgeVectors(
+  documentId: string,
+  documentType: 'abbreviation' | 'script'
+) {
+  try {
+    const response = await fetch(`/api/vectorize/knowledge?documentId=${documentId}&documentType=${documentType}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || '向量删除失败')
+    }
+
+    const result = await response.json()
+    console.log(result.message)
+    return result
+  } catch (error) {
+    console.error('Error deleting knowledge vectors:', error)
     throw error
   }
 }

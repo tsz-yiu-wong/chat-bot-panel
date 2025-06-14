@@ -81,6 +81,7 @@ export default function TopicsPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string>('')
   const [deleteType, setDeleteType] = useState<'category' | 'subcategory' | 'topic'>('category')
+  const [deleting, setDeleting] = useState(false)
 
   // 拖拽检测相关状态
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
@@ -133,16 +134,19 @@ export default function TopicsPage() {
     try {
       setLoading(true)
       
-      // 使用单次 JOIN 查询获取所有数据，提高性能
+      // 使用单次 JOIN 查询获取所有数据，提高性能，过滤软删除记录
       const { data: allData, error } = await supabase
         .from('topic_categories')
         .select(`
           *,
-          subcategories:topic_subcategories(
+          subcategories:topic_subcategories!inner(
             *,
-            topics:topics(*)
+            topics:topics!inner(*)
           )
         `)
+        .eq('is_deleted', false)
+        .eq('subcategories.is_deleted', false)
+        .eq('subcategories.topics.is_deleted', false)
         .order('sort_order', { ascending: true })
 
       if (error) throw error
@@ -326,6 +330,66 @@ export default function TopicsPage() {
   // 编辑处理函数
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 保存原始状态用于错误回滚
+    const originalCategories = [...categories]
+    
+    // 乐观更新：立即更新本地状态
+    if (selectedLevel === 'category') {
+      const optimisticCategory = {
+        ...categories.find(c => c.id === formData.id)!,
+        name_cn: formData.name_cn,
+        name_vn: formData.name_vn,
+        sort_order: formData.sort_order,
+        updated_at: new Date().toISOString()
+      }
+      
+      // 立即更新UI
+      setCategories(prev => prev.map(category => 
+        category.id === formData.id 
+          ? { ...category, ...optimisticCategory }
+          : category
+      ))
+    } else if (selectedLevel === 'subcategory') {
+      const optimisticSubcategory = {
+        ...categories.flatMap(c => c.subcategories).find(s => s.id === formData.id)!,
+        name_cn: formData.name_cn,
+        name_vn: formData.name_vn,
+        sort_order: formData.sort_order,
+        updated_at: new Date().toISOString()
+      }
+      
+      // 立即更新UI
+      setCategories(prev => prev.map(category => ({
+        ...category,
+        subcategories: category.subcategories.map(sub =>
+          sub.id === formData.id ? { ...sub, ...optimisticSubcategory } : sub
+        )
+      })))
+    } else if (selectedLevel === 'topic') {
+      const optimisticTopic = {
+        ...categories.flatMap(c => c.subcategories).flatMap(s => s.topics).find(t => t.id === formData.id)!,
+        content: formData.content,
+        sort_order: formData.sort_order,
+        updated_at: new Date().toISOString()
+      }
+      
+      // 立即更新UI
+      setCategories(prev => prev.map(category => ({
+        ...category,
+        subcategories: category.subcategories.map(sub => ({
+          ...sub,
+          topics: sub.topics.map(topic =>
+            topic.id === formData.id ? { ...topic, ...optimisticTopic } : topic
+          )
+        }))
+      })))
+    }
+    
+    // 关闭模态框
+    setShowEditModal(false)
+    resetFormData()
+
     try {
       if (selectedLevel === 'category') {
         const { data, error } = await supabase
@@ -340,7 +404,7 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 局部更新状态
+        // 成功后更新为真实数据
         if (data?.[0]) {
           setCategories(prev => prev.map(category => 
             category.id === formData.id 
@@ -361,7 +425,7 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 局部更新状态
+        // 成功后更新为真实数据
         if (data?.[0]) {
           setCategories(prev => prev.map(category => ({
             ...category,
@@ -382,7 +446,7 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 局部更新状态
+        // 成功后更新为真实数据
         if (data?.[0]) {
           setCategories(prev => prev.map(category => ({
             ...category,
@@ -395,62 +459,128 @@ export default function TopicsPage() {
           })))
         }
       }
-
-      setShowEditModal(false)
-      resetFormData()
     } catch (err) {
+      // 失败时回滚状态
+      setCategories(originalCategories)
       setError(err instanceof Error ? err.message : '编辑失败')
+      
+      // 重新打开模态框
+      setShowEditModal(true)
     }
   }
 
-  // 删除处理函数
+  // 删除处理函数 - 改为软删除，支持级联
   async function handleDelete() {
+    setDeleting(true)
+    
+    // 保存原始状态用于错误回滚
+    const originalCategories = [...categories]
+    
+    // 乐观更新：立即从UI中移除
+    if (deleteType === 'category') {
+      setCategories(prev => prev.filter(category => category.id !== deleteId))
+    } else if (deleteType === 'subcategory') {
+      setCategories(prev => prev.map(category => ({
+        ...category,
+        subcategories: category.subcategories.filter(sub => sub.id !== deleteId)
+      })))
+    } else if (deleteType === 'topic') {
+      setCategories(prev => prev.map(category => ({
+        ...category,
+        subcategories: category.subcategories.map(sub => ({
+          ...sub,
+          topics: sub.topics.filter(topic => topic.id !== deleteId)
+        }))
+      })))
+    }
+    
+    // 关闭模态框
+    setShowDeleteModal(false)
+    const currentDeleteId = deleteId
+    const currentDeleteType = deleteType
+    setDeleteId('')
+
     try {
-      if (deleteType === 'category') {
+      if (currentDeleteType === 'category') {
+        // 级联软删除：先删除所有相关的话题，再删除小类，最后删除大类
+        const category = originalCategories.find(c => c.id === currentDeleteId)
+        if (category) {
+          // 软删除所有相关话题
+          for (const subcategory of category.subcategories) {
+            if (subcategory.topics.length > 0) {
+              const { error: topicError } = await supabase
+                .from('topics')
+                .update({ is_deleted: true })
+                .eq('subcategory_id', subcategory.id)
+                .eq('is_deleted', false)
+              
+              if (topicError) throw topicError
+            }
+          }
+          
+          // 软删除所有相关小类
+          if (category.subcategories.length > 0) {
+            const { error: subcategoryError } = await supabase
+              .from('topic_subcategories')
+              .update({ is_deleted: true })
+              .eq('category_id', currentDeleteId)
+              .eq('is_deleted', false)
+            
+            if (subcategoryError) throw subcategoryError
+          }
+        }
+        
+        // 软删除大类
         const { error } = await supabase
           .from('topic_categories')
-          .delete()
-          .eq('id', deleteId)
+          .update({ is_deleted: true })
+          .eq('id', currentDeleteId)
           
         if (error) throw error
+      } else if (currentDeleteType === 'subcategory') {
+        // 级联软删除：先删除所有相关话题，再删除小类
+        const subcategory = originalCategories
+          .flatMap(c => c.subcategories)
+          .find(s => s.id === currentDeleteId)
         
-        // 局部更新状态
-        setCategories(prev => prev.filter(category => category.id !== deleteId))
-      } else if (deleteType === 'subcategory') {
+        if (subcategory && subcategory.topics.length > 0) {
+          // 软删除所有相关话题
+          const { error: topicError } = await supabase
+            .from('topics')
+            .update({ is_deleted: true })
+            .eq('subcategory_id', currentDeleteId)
+            .eq('is_deleted', false)
+          
+          if (topicError) throw topicError
+        }
+        
+        // 软删除小类
         const { error } = await supabase
           .from('topic_subcategories')
-          .delete()
-          .eq('id', deleteId)
+          .update({ is_deleted: true })
+          .eq('id', currentDeleteId)
           
         if (error) throw error
-        
-        // 局部更新状态
-        setCategories(prev => prev.map(category => ({
-          ...category,
-          subcategories: category.subcategories.filter(sub => sub.id !== deleteId)
-        })))
-      } else if (deleteType === 'topic') {
+      } else if (currentDeleteType === 'topic') {
+        // 软删除话题
         const { error } = await supabase
           .from('topics')
-          .delete()
-          .eq('id', deleteId)
+          .update({ is_deleted: true })
+          .eq('id', currentDeleteId)
           
         if (error) throw error
-        
-        // 局部更新状态
-        setCategories(prev => prev.map(category => ({
-          ...category,
-          subcategories: category.subcategories.map(sub => ({
-            ...sub,
-            topics: sub.topics.filter(topic => topic.id !== deleteId)
-          }))
-        })))
       }
-
-      setShowDeleteModal(false)
-      setDeleteId('')
     } catch (err) {
+      // 失败时回滚状态
+      setCategories(originalCategories)
       setError(err instanceof Error ? err.message : '删除失败')
+      
+      // 重新打开删除模态框
+      setDeleteId(currentDeleteId)
+      setDeleteType(currentDeleteType)  
+      setShowDeleteModal(true)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -898,7 +1028,7 @@ export default function TopicsPage() {
           deleteType === 'category' ? '这将同时删除其下的所有小类和话题。' :
           deleteType === 'subcategory' ? '这将同时删除其下的所有话题。' : ''
         }`}
-        confirmText="删除"
+        confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
       />

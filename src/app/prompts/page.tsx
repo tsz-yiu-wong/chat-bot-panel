@@ -287,6 +287,7 @@ export default function PromptsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string>('')
+  const [deleting, setDeleting] = useState(false)
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA)
 
   // 加载提示词数据
@@ -300,6 +301,7 @@ export default function PromptsPage() {
       const { data, error } = await supabase
         .from('prompts')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -315,6 +317,31 @@ export default function PromptsPage() {
   // 创建新提示词
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 生成临时ID用于乐观更新
+    const tempId = `temp-${Date.now()}`
+    const optimisticPrompt: Prompt = {
+      id: tempId,
+      name: formData.name,
+      model_name: formData.model_name,
+      stage_name: formData.stage_name,
+      prompt_cn: formData.prompt_cn,
+      prompt_vn: formData.prompt_vn,
+      mark: formData.mark,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    // 保存原始状态用于错误回滚
+    const originalPrompts = [...prompts]
+    
+    // 乐观更新：立即更新UI
+    setPrompts([optimisticPrompt, ...prompts])
+    
+    // 关闭模态框并重置表单
+    setShowCreateModal(false)
+    setFormData(DEFAULT_FORM_DATA)
+
     try {
       const { data, error } = await supabase
         .from('prompts')
@@ -330,36 +357,86 @@ export default function PromptsPage() {
 
       if (error) throw error
 
-      setPrompts([...(data || []), ...prompts])
-      setShowCreateModal(false)
-      setFormData(DEFAULT_FORM_DATA)
+      if (data?.[0]) {
+        // 替换临时记录为真实记录
+        setPrompts(prev => prev.map(p => p.id === tempId ? data[0] : p))
+      }
     } catch (err) {
+      // 失败时回滚状态
+      setPrompts(originalPrompts)
       console.error('Error creating prompt:', err)
       setError(err instanceof Error ? err.message : '创建提示词失败')
+      
+      // 重新打开模态框并恢复表单数据
+      setFormData({
+        id: '',
+        name: optimisticPrompt.name,
+        model_name: optimisticPrompt.model_name,
+        stage_name: optimisticPrompt.stage_name,
+        prompt_cn: optimisticPrompt.prompt_cn,
+        prompt_vn: optimisticPrompt.prompt_vn,
+        mark: optimisticPrompt.mark || ''
+      })
+      setShowCreateModal(true)
     }
   }
 
-  // 删除提示词
+  // 删除提示词 - 改为软删除
   async function handleDelete() {
+    setDeleting(true)
+    
+    // 乐观更新：立即从UI中移除
+    const originalPrompts = [...prompts]
+    setPrompts(prompts.filter(p => p.id !== deleteId))
+    
+    // 关闭模态框
+    setShowDeleteModal(false)
+    const currentDeleteId = deleteId
+    setDeleteId('')
+    
     try {
+      // 软删除提示词记录
       const { error } = await supabase
         .from('prompts')
-        .delete()
-        .eq('id', deleteId)
+        .update({ is_deleted: true })
+        .eq('id', currentDeleteId)
 
       if (error) throw error
-
-      setPrompts(prompts.filter(p => p.id !== deleteId))
-      setShowDeleteModal(false)
-      setDeleteId('')
     } catch (err) {
+      // 失败时回滚状态
+      setPrompts(originalPrompts)
       setError(err instanceof Error ? err.message : '删除提示词失败')
+      
+      // 重新打开删除模态框
+      setDeleteId(currentDeleteId)
+      setShowDeleteModal(true)
+    } finally {
+      setDeleting(false)
     }
   }
 
   // 编辑提示词
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // 乐观更新：立即更新本地状态
+    const optimisticPrompt = {
+      ...prompts.find(p => p.id === formData.id)!,
+      name: formData.name,
+      model_name: formData.model_name,
+      stage_name: formData.stage_name,
+      prompt_cn: formData.prompt_cn,
+      prompt_vn: formData.prompt_vn,
+      mark: formData.mark,
+      updated_at: new Date().toISOString()
+    }
+    const originalPrompts = [...prompts]
+    
+    // 立即更新UI并关闭模态框
+    setPrompts(prompts.map(p => p.id === formData.id ? optimisticPrompt : p))
+    setShowEditModal(false)
+    setFormData(DEFAULT_FORM_DATA)
+
     try {
       const { data, error } = await supabase
         .from('prompts')
@@ -376,11 +453,23 @@ export default function PromptsPage() {
 
       if (error) throw error
 
+      // 成功后更新为真实数据
       setPrompts(prompts.map(p => p.id === formData.id ? (data?.[0] ?? p) : p))
-      setShowEditModal(false)
-      setFormData(DEFAULT_FORM_DATA)
     } catch (err) {
+      // 失败时回滚状态
+      setPrompts(originalPrompts)
       setError(err instanceof Error ? err.message : '编辑提示词失败')
+      // 重新打开模态框
+      setFormData({
+        id: optimisticPrompt.id,
+        name: optimisticPrompt.name,
+        model_name: optimisticPrompt.model_name,
+        stage_name: optimisticPrompt.stage_name,
+        prompt_cn: optimisticPrompt.prompt_cn,
+        prompt_vn: optimisticPrompt.prompt_vn,
+        mark: optimisticPrompt.mark || ''
+      })
+      setShowEditModal(true)
     }
   }
 
@@ -674,7 +763,7 @@ export default function PromptsPage() {
         onConfirm={handleDelete}
         title="确认删除"
         message="确定要删除这个提示词吗？此操作无法撤销。"
-        confirmText="删除"
+        confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
       />
