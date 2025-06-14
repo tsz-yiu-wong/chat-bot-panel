@@ -251,13 +251,13 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
             const scenarioText = result.metadata?.scenario ? String(result.metadata.scenario) : null
             
             return (
-            <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border">
+            <div key={index} className="p-4 bg-gray-50 dark:bg-[var(--accent-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)]">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
                     result.type === 'abbreviation' 
                       ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   }`}>
                     {activeTab === 'abbreviations' && categoryText 
                       ? categoryText 

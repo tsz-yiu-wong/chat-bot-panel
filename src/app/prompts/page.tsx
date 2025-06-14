@@ -5,7 +5,7 @@ import { Plus, Edit, Trash2, Bot, Tag, ChevronDown, ChevronUp } from 'lucide-rea
 import { supabase } from '@/lib/supabase'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { Form, Input, Select, Textarea } from '@/components/ui/form'
+import { Form, Input, Textarea } from '@/components/ui/form'
 import { FilterTabs } from '@/components/ui/filter-tabs'
 import { PageHeader } from '@/components/ui/page-header'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -21,6 +21,72 @@ interface Prompt {
   mark?: string
   created_at: string
   updated_at: string
+}
+
+// 自定义Select组件 - 保持与其他页面样式一致
+interface CustomSelectProps {
+  label?: string
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+  required?: boolean
+  placeholder?: string
+}
+
+function CustomSelect({ label, value, onChange, options, required, placeholder }: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedOption = options.find(opt => opt.value === value)
+
+  return (
+    <div className="space-y-2">
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full px-3 py-2 rounded-lg transition-colors duration-150 border border-gray-200 dark:border-[var(--border-color)] focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 flex items-center justify-between"
+        >
+          <span className={selectedOption ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}>
+            {selectedOption?.label || placeholder || '请选择...'}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        
+        {isOpen && (
+          <>
+            <div 
+              className="fixed inset-0 z-10" 
+              onClick={() => setIsOpen(false)}
+            />
+            <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white dark:bg-[var(--component-background)] border border-gray-200 dark:border-[var(--border-color)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${
+                    value === option.value 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-gray-900 dark:text-gray-100'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // 默认表单数据
@@ -704,16 +770,16 @@ export default function PromptsPage() {
           />
           
           <div className="grid grid-cols-2 gap-4">
-            <Select
+            <CustomSelect
               label="关联模型"
               value={formData.model_name}
-              onChange={(e) => setFormData({...formData, model_name: e.target.value})}
+              onChange={(value) => setFormData({...formData, model_name: value})}
               options={modelOptions}
             />
-            <Select
+            <CustomSelect
               label="聊天阶段"
               value={formData.stage_name}
-              onChange={(e) => setFormData({...formData, stage_name: e.target.value})}
+              onChange={(value) => setFormData({...formData, stage_name: value})}
               options={stageOptions}
             />
           </div>

@@ -999,7 +999,7 @@ export default function KnowledgePage() {
                 className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
                   selectedCategory === 'all'
                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    : 'bg-gray-100 dark:bg-[var(--accent-background)] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[var(--border-color)]'
                 }`}
               >
                 全部 ({activeTab === 'abbreviations' ? abbreviations.length : scripts.length})
@@ -1011,7 +1011,7 @@ export default function KnowledgePage() {
                     className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
                       selectedCategory === option.value
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        : 'bg-gray-100 dark:bg-[var(--accent-background)] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[var(--border-color)]'
                     }`}
                   >
                     {option.label} ({option.count})
@@ -1122,7 +1122,7 @@ export default function KnowledgePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-3 mb-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                           {script.scenario}
                         </span>
                       </div>
@@ -1130,7 +1130,7 @@ export default function KnowledgePage() {
                       <div className="space-y-3">
                         <div className="flex items-start space-x-3">
                           <div className="flex items-center space-x-2 flex-shrink-0 mt-1">
-                            <div className="w-5 h-5 bg-blue-100 dark:bg-blue-800/50 rounded-full flex items-center justify-center">
+                            <div className="w-5 h-5 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                               <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Q</span>
                             </div>
                             <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wide uppercase">用户</span>
@@ -1142,7 +1142,7 @@ export default function KnowledgePage() {
                         
                         <div className="flex items-start space-x-3">
                           <div className="flex items-center space-x-2 flex-shrink-0 mt-1">
-                            <div className="w-5 h-5 bg-emerald-100 dark:bg-emerald-800/50 rounded-full flex items-center justify-center">
+                            <div className="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
                               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">A</span>
                             </div>
                             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tracking-wide uppercase">回答</span>
