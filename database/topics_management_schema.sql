@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. 创建话题大类表
 CREATE TABLE IF NOT EXISTS topic_categories (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name_cn VARCHAR(255) NOT NULL,
+    name_cn VARCHAR(255),
     name_vn VARCHAR(255) NOT NULL,
     sort_order INTEGER DEFAULT 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS topic_categories (
 CREATE TABLE IF NOT EXISTS topic_subcategories (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     category_id UUID NOT NULL REFERENCES topic_categories(id) ON DELETE CASCADE,
-    name_cn VARCHAR(255) NOT NULL,
+    name_cn VARCHAR(255),
     name_vn VARCHAR(255) NOT NULL,
     sort_order INTEGER DEFAULT 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS topics (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- ===== 数据库结构更新 =====
+-- 如果表已存在，则修改字段约束
+ALTER TABLE topic_categories ALTER COLUMN name_cn DROP NOT NULL;
+ALTER TABLE topic_subcategories ALTER COLUMN name_cn DROP NOT NULL;
 
 -- ===== 索引优化 =====
 -- 创建索引以提高查询性能

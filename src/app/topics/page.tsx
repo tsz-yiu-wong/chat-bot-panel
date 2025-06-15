@@ -685,7 +685,7 @@ export default function TopicsPage() {
                 >
                   <div className="text-sm text-gray-900 dark:text-gray-100">{topic.content}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {category?.name_cn} ({category?.name_vn}) → {subcategory?.name_cn} ({subcategory?.name_vn})
+                    {category?.name_vn} ({category?.name_cn}) → {subcategory?.name_vn} ({subcategory?.name_cn})
                   </div>
                 </button>
               )
@@ -696,9 +696,6 @@ export default function TopicsPage() {
 
       {/* 分类树 */}
       <div className="bg-white dark:bg-[var(--component-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)] neumorphic-subtle">
-        <div className="p-4 border-b border-gray-200 dark:border-[var(--border-color)]">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">分类结构</h2>
-        </div>
         <div className="divide-y divide-gray-200 dark:divide-[var(--border-color)]">
           {categories.map((category) => (
             <div key={category.id}>
@@ -721,7 +718,7 @@ export default function TopicsPage() {
                     <div className="ml-3 flex-1 min-w-0">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900 dark:text-gray-100 cursor-text select-text break-words">
-                          {category.name_cn} ({category.name_vn})
+                          {category.name_vn} ({category.name_cn})
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 cursor-text select-text whitespace-nowrap">
                           {categoryStats.find(stat => stat.id === category.id)?.subcategoryCount || 0} 个小类，
@@ -776,7 +773,7 @@ export default function TopicsPage() {
                             <div className="ml-3 flex-1 min-w-0">
                               <div className="flex flex-col">
                                 <span className="font-medium text-gray-900 dark:text-gray-100 cursor-text select-text break-words">
-                                  {subcategory.name_cn} ({subcategory.name_vn})
+                                  {subcategory.name_vn} ({subcategory.name_cn})
                                 </span>
                                 <span className="text-xs text-gray-500 dark:text-gray-400 cursor-text select-text whitespace-nowrap">
                                   {subcategory.topics.length} 个话题
@@ -928,23 +925,22 @@ export default function TopicsPage() {
           {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
             <>
               <Input
-                label="中文名称"
-                value={formData.name_cn}
-                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                required
-              />
-              <Input
-                label="越南文名称"
+                label={selectedLevel === 'category' ? 'Tên danh mục lớn' : 'Tên danh mục nhỏ'}
                 value={formData.name_vn}
                 onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
                 required
+              />
+              <Input
+                label={selectedLevel === 'category' ? '大类名称' : '小类名称'}
+                value={formData.name_cn}
+                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
               />
             </>
           )}
           
           {selectedLevel === 'topic' && (
             <Textarea
-              label="话题内容"
+              label="Nội dung chủ đề chủ động"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={4}
@@ -976,23 +972,22 @@ export default function TopicsPage() {
           {(selectedLevel === 'category' || selectedLevel === 'subcategory') && (
             <>
               <Input
-                label="中文名称"
-                value={formData.name_cn}
-                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
-                required
-              />
-              <Input
-                label="越南文名称"
+                label={selectedLevel === 'category' ? 'Tên danh mục lớn' : 'Tên danh mục nhỏ'}
                 value={formData.name_vn}
                 onChange={(e) => setFormData({ ...formData, name_vn: e.target.value })}
                 required
+              />
+              <Input
+                label={selectedLevel === 'category' ? '大类名称' : '小类名称'}
+                value={formData.name_cn}
+                onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
               />
             </>
           )}
           
           {selectedLevel === 'topic' && (
             <Textarea
-              label="话题内容"
+              label="Nội dung chủ đề chủ động"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={4}

@@ -13,9 +13,31 @@ import { supabase } from '@/lib/supabase'
 import { updateKnowledgeVectors, deleteKnowledgeVectors } from '@/lib/vector'
 
 // 类型定义
+interface KnowledgeCategory {
+  id: string
+  name_vi: string
+  name_cn: string | null
+  sort_order: number
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface KnowledgeScenario {
+  id: string
+  name_vi: string
+  name_cn: string | null
+  sort_order: number
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
 interface Abbreviation {
   id: string
-  category: string
+  category?: string  // 保留原字段用于兼容，可选
+  category_id: string | null
+  category_data?: KnowledgeCategory  // 关联的分类数据
   abbreviation: string
   full_form: string
   description: string | null
@@ -25,17 +47,13 @@ interface Abbreviation {
 
 interface ConversationScript {
   id: string
-  scenario: string
+  scenario?: string  // 保留原字段用于兼容，可选
+  scenario_id: string | null
+  scenario_data?: KnowledgeScenario  // 关联的场景数据
   text: string
   answer: string
   created_at: string
   updated_at: string
-}
-
-interface CategoryOption {
-  value: string
-  label: string
-  count?: number
 }
 
 // 自定义Select组件 - 支持添加新选项
@@ -174,19 +192,21 @@ function CustomSelect({ label, value, onChange, options, required, placeholder, 
   )
 }
 
-// 默认分类配置
-const DEFAULT_ABBREVIATION_CATEGORIES = [
-  '其他'
-]
-
-const DEFAULT_CONVERSATION_SCENARIOS = [
-  '其他'
-]
+// 格式化分类显示名称
+const formatCategoryName = (category?: KnowledgeCategory | KnowledgeScenario): string => {
+  if (!category) {
+    return 'Khác'
+  }
+  if (category.name_cn) {
+    return `${category.name_vi} (${category.name_cn})`
+  }
+  return category.name_vi
+}
 
 // 默认表单数据
 const DEFAULT_ABBREVIATION_FORM = {
   id: '',
-  category: '其他',
+  category_id: '',
   abbreviation: '',
   full_form: '',
   description: ''
@@ -194,21 +214,26 @@ const DEFAULT_ABBREVIATION_FORM = {
 
 const DEFAULT_SCRIPT_FORM = {
   id: '',
-  scenario: '其他',
+  scenario_id: '',
   text: '',
   answer: ''
+}
+
+// 编辑分类表单默认数据
+const DEFAULT_EDIT_CATEGORY_FORM = {
+  categoryId: '',
+  name_vi: '',
+  name_cn: ''
 }
 
 export default function KnowledgePage() {
   const [activeTab, setActiveTab] = useState<'abbreviations' | 'scripts'>('abbreviations')
   const [abbreviations, setAbbreviations] = useState<Abbreviation[]>([])
   const [scripts, setScripts] = useState<ConversationScript[]>([])
+  const [categories, setCategories] = useState<KnowledgeCategory[]>([])
+  const [scenarios, setScenarios] = useState<KnowledgeScenario[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  
-  // 动态分类状态
-  const [abbreviationCategories, setAbbreviationCategories] = useState<string[]>(DEFAULT_ABBREVIATION_CATEGORIES)
-  const [scriptScenarios, setScriptScenarios] = useState<string[]>(DEFAULT_CONVERSATION_SCENARIOS)
   
   // 模态框状态
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -225,77 +250,86 @@ export default function KnowledgePage() {
   // 表单状态
   const [abbreviationForm, setAbbreviationForm] = useState(DEFAULT_ABBREVIATION_FORM)
   const [scriptForm, setScriptForm] = useState(DEFAULT_SCRIPT_FORM)
-  const [editCategoryForm, setEditCategoryForm] = useState({ oldName: '', newName: '' })
+  const [editCategoryForm, setEditCategoryForm] = useState(DEFAULT_EDIT_CATEGORY_FORM)
 
-  // 加载数据和动态分类
+  // 加载数据
   useEffect(() => {
     if (activeTab === 'abbreviations') {
-      fetchAbbreviations()
+      Promise.all([fetchAbbreviations(), fetchCategories()])
     } else {
-      fetchScripts()
+      Promise.all([fetchScripts(), fetchScenarios()])
     }
   }, [activeTab])
 
-  // 动态获取分类选项
-  const getCategoryOptions = (): CategoryOption[] => {
+  // 获取分类选项
+  const getCategoryOptions = () => {
+    const currentCategories = activeTab === 'abbreviations' ? categories : scenarios
     const currentData = activeTab === 'abbreviations' ? abbreviations : scripts
-    const currentCategories = activeTab === 'abbreviations' ? abbreviationCategories : scriptScenarios
-    const fieldName = activeTab === 'abbreviations' ? 'category' : 'scenario'
     
-    // 过滤掉"其他"并按首字母排序
-    const sortedCategories = currentCategories
-      .filter(category => category !== '其他')
-      .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-    
-    // 如果存在"其他"分类，将其添加到末尾
-    const finalCategories = currentCategories.includes('其他') 
-      ? [...sortedCategories, '其他']
-      : sortedCategories
-    
-    return finalCategories.map(category => {
-      const count = currentData.filter(item => {
-        if (fieldName === 'category' && 'category' in item) {
-          return item.category === category
+    return currentCategories
+      .filter(cat => !cat.is_deleted)
+      .sort((a, b) => {
+        // "Khác" 分类排在最后
+        if (a.name_vi === 'Khác' && b.name_vi !== 'Khác') return 1
+        if (b.name_vi === 'Khác' && a.name_vi !== 'Khác') return -1
+        return a.sort_order - b.sort_order
+      })
+      .map(cat => {
+        const count = currentData.filter(item => {
+          if (activeTab === 'abbreviations') {
+            return (item as Abbreviation).category_id === cat.id
+          } else {
+            return (item as ConversationScript).scenario_id === cat.id
+          }
+        }).length
+        
+        return {
+          value: cat.id,
+          label: formatCategoryName(cat),
+          count
         }
-        if (fieldName === 'scenario' && 'scenario' in item) {
-          return item.scenario === category
-        }
-        return false
-      }).length
-      return {
-        value: category,
-        label: category,
-        count
-      }
-    })
+      })
   }
 
   // 获取表单选项
   const getFormOptions = () => {
-    const categories = activeTab === 'abbreviations' ? abbreviationCategories : scriptScenarios
-    return categories.map(cat => ({ value: cat, label: cat }))
+    const currentCategories = activeTab === 'abbreviations' ? categories : scenarios
+    return currentCategories
+      .filter(cat => !cat.is_deleted)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(cat => ({
+        value: cat.id,
+        label: formatCategoryName(cat)
+      }))
   }
 
-  // 添加新分类到列表（确保"其他"始终在最后）
-  const addNewCategory = (newCategory: string) => {
-    if (activeTab === 'abbreviations') {
-      if (!abbreviationCategories.includes(newCategory)) {
-        const allCategories = [...abbreviationCategories, newCategory]
-        const sortedCategories = allCategories
-          .filter(cat => cat !== '其他')
-          .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-        
-        setAbbreviationCategories([...sortedCategories, '其他'])
-      }
-    } else {
-      if (!scriptScenarios.includes(newCategory)) {
-        const allScenarios = [...scriptScenarios, newCategory]
-        const sortedScenarios = allScenarios
-          .filter(sc => sc !== '其他')
-          .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-        
-        setScriptScenarios([...sortedScenarios, '其他'])
-      }
+  async function fetchCategories() {
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_categories')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      setCategories(data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载分类失败')
+    }
+  }
+
+  async function fetchScenarios() {
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_scenarios')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      setScenarios(data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载场景失败')
     }
   }
 
@@ -304,24 +338,15 @@ export default function KnowledgePage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
-        .select('*')
+        .select(`
+          *,
+          category_data:knowledge_categories!category_id(*)
+        `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       setAbbreviations(data || [])
-      
-      // 动态更新分类 - 按首字母排序，确保"其他"始终在最后
-      const categories = [...new Set(data?.map(item => item.category) || [])]
-      const sortedCategories = categories
-        .filter(cat => cat !== '其他')
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      
-      const finalCategories = categories.includes('其他') 
-        ? [...sortedCategories, '其他']
-        : [...sortedCategories, '其他']
-      
-      setAbbreviationCategories(finalCategories)
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载缩写库失败')
     } finally {
@@ -334,24 +359,15 @@ export default function KnowledgePage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('knowledge_scripts')
-        .select('*')
+        .select(`
+          *,
+          scenario_data:knowledge_scenarios!scenario_id(*)
+        `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       setScripts(data || [])
-      
-      // 动态更新场景 - 按首字母排序，确保"其他"始终在最后
-      const scenarios = [...new Set(data?.map(item => item.scenario) || [])]
-      const sortedScenarios = scenarios
-        .filter(sc => sc !== '其他')
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      
-      const finalScenarios = scenarios.includes('其他') 
-        ? [...sortedScenarios, '其他']
-        : [...sortedScenarios, '其他']
-      
-      setScriptScenarios(finalScenarios)
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载话术库失败')
     } finally {
@@ -367,7 +383,7 @@ export default function KnowledgePage() {
     const tempId = `temp-${Date.now()}`
     const optimisticAbbreviation: Abbreviation = {
       id: tempId,
-      category: abbreviationForm.category,
+      category_id: abbreviationForm.category_id,
       abbreviation: abbreviationForm.abbreviation,
       full_form: abbreviationForm.full_form,
       description: abbreviationForm.description || null,
@@ -377,19 +393,9 @@ export default function KnowledgePage() {
     
     // 保存原始状态用于错误回滚
     const originalAbbreviations = [...abbreviations]
-    const originalCategories = [...abbreviationCategories]
     
     // 乐观更新：立即更新UI
     setAbbreviations([optimisticAbbreviation, ...abbreviations])
-    
-    // 如果是新分类，立即更新分类列表
-    const isNewCategory = !abbreviationCategories.includes(abbreviationForm.category)
-    if (isNewCategory) {
-      const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
-      const sortedCategories = [...filteredCategories, abbreviationForm.category]
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      setAbbreviationCategories([...sortedCategories, '其他'])
-    }
     
     // 关闭模态框并重置表单
     setShowCreateModal(false)
@@ -399,7 +405,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
         .insert([{
-          category: abbreviationForm.category,
+          category_id: abbreviationForm.category_id,
           abbreviation: abbreviationForm.abbreviation,
           full_form: abbreviationForm.full_form,
           description: abbreviationForm.description || null
@@ -412,7 +418,7 @@ export default function KnowledgePage() {
         // 替换临时记录为真实记录
         setAbbreviations(prev => prev.map(a => a.id === tempId ? data[0] : a))
         
-        // 异步更新向量 - 利用数据库触发器 + OpenAI API
+        // 异步更新向量
         try {
           await updateKnowledgeVectors(
             data[0].id,
@@ -421,7 +427,7 @@ export default function KnowledgePage() {
               abbreviation: abbreviationForm.abbreviation,
               full_form: abbreviationForm.full_form,
               description: abbreviationForm.description,
-              category: abbreviationForm.category
+              category: abbreviationForm.category_id
             }
           )
         } catch (vectorError) {
@@ -431,15 +437,12 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setAbbreviations(originalAbbreviations)
-      if (isNewCategory) {
-        setAbbreviationCategories(originalCategories)
-      }
       setError(err instanceof Error ? err.message : '创建缩写失败')
       
       // 重新打开模态框并恢复表单数据
       setAbbreviationForm({
         id: '',
-        category: optimisticAbbreviation.category,
+        category_id: optimisticAbbreviation.category_id || '',
         abbreviation: optimisticAbbreviation.abbreviation,
         full_form: optimisticAbbreviation.full_form,
         description: optimisticAbbreviation.description || ''
@@ -456,7 +459,7 @@ export default function KnowledgePage() {
     const tempId = `temp-${Date.now()}`
     const optimisticScript: ConversationScript = {
       id: tempId,
-      scenario: scriptForm.scenario,
+      scenario_id: scriptForm.scenario_id,
       text: scriptForm.text,
       answer: scriptForm.answer,
       created_at: new Date().toISOString(),
@@ -465,19 +468,9 @@ export default function KnowledgePage() {
     
     // 保存原始状态用于错误回滚
     const originalScripts = [...scripts]
-    const originalScenarios = [...scriptScenarios]
     
     // 乐观更新：立即更新UI
     setScripts([optimisticScript, ...scripts])
-    
-    // 如果是新场景，立即更新场景列表
-    const isNewScenario = !scriptScenarios.includes(scriptForm.scenario)
-    if (isNewScenario) {
-      const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
-      const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      setScriptScenarios([...sortedScenarios, '其他'])
-    }
     
     // 关闭模态框并重置表单
     setShowCreateModal(false)
@@ -487,7 +480,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_scripts')
         .insert([{
-          scenario: scriptForm.scenario,
+          scenario_id: scriptForm.scenario_id,
           text: scriptForm.text,
           answer: scriptForm.answer
         }])
@@ -499,13 +492,13 @@ export default function KnowledgePage() {
         // 替换临时记录为真实记录
         setScripts(prev => prev.map(s => s.id === tempId ? data[0] : s))
         
-        // 异步更新向量 - 利用数据库触发器 + OpenAI API
+        // 异步更新向量
         try {
           await updateKnowledgeVectors(
             data[0].id,
             'script',
             {
-              scenario: scriptForm.scenario,
+              scenario: scriptForm.scenario_id,
               text: scriptForm.text,
               answer: scriptForm.answer
             }
@@ -517,15 +510,12 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setScripts(originalScripts)
-      if (isNewScenario) {
-        setScriptScenarios(originalScenarios)
-      }
       setError(err instanceof Error ? err.message : '创建话术失败')
       
       // 重新打开模态框并恢复表单数据
       setScriptForm({
         id: '',
-        scenario: optimisticScript.scenario,
+        scenario_id: optimisticScript.scenario_id || '',
         text: optimisticScript.text,
         answer: optimisticScript.answer
       })
@@ -540,7 +530,7 @@ export default function KnowledgePage() {
     // 乐观更新：立即更新本地状态
     const optimisticAbbreviation = {
       ...abbreviations.find(a => a.id === abbreviationForm.id)!,
-      category: abbreviationForm.category,
+      category_id: abbreviationForm.category_id,
       abbreviation: abbreviationForm.abbreviation,
       full_form: abbreviationForm.full_form,
       description: abbreviationForm.description || null,
@@ -551,16 +541,6 @@ export default function KnowledgePage() {
     // 立即更新UI
     setAbbreviations(abbreviations.map(a => a.id === abbreviationForm.id ? optimisticAbbreviation : a))
     
-    // 如果是新分类，立即更新分类列表
-    const isNewCategory = !abbreviationCategories.includes(abbreviationForm.category)
-    const originalCategories = [...abbreviationCategories]
-    if (isNewCategory) {
-      const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他')
-      const sortedCategories = [...filteredCategories, abbreviationForm.category]
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      setAbbreviationCategories([...sortedCategories, '其他'])
-    }
-    
     // 关闭模态框
     setShowEditModal(false)
     setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
@@ -569,7 +549,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
         .update({
-          category: abbreviationForm.category,
+          category_id: abbreviationForm.category_id,
           abbreviation: abbreviationForm.abbreviation,
           full_form: abbreviationForm.full_form,
           description: abbreviationForm.description || null
@@ -589,7 +569,7 @@ export default function KnowledgePage() {
               abbreviation: abbreviationForm.abbreviation,
               full_form: abbreviationForm.full_form,
               description: abbreviationForm.description,
-              category: abbreviationForm.category
+              category: abbreviationForm.category_id
             }
           )
         } catch (vectorError) {
@@ -602,14 +582,11 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setAbbreviations(originalAbbreviations)
-      if (isNewCategory) {
-        setAbbreviationCategories(originalCategories)
-      }
       setError(err instanceof Error ? err.message : '编辑缩写失败')
       // 重新打开模态框
       setAbbreviationForm({
         id: optimisticAbbreviation.id,
-        category: optimisticAbbreviation.category,
+        category_id: optimisticAbbreviation.category_id,
         abbreviation: optimisticAbbreviation.abbreviation,
         full_form: optimisticAbbreviation.full_form,
         description: optimisticAbbreviation.description || ''
@@ -625,7 +602,7 @@ export default function KnowledgePage() {
     // 乐观更新：立即更新本地状态
     const optimisticScript = {
       ...scripts.find(s => s.id === scriptForm.id)!,
-      scenario: scriptForm.scenario,
+      scenario_id: scriptForm.scenario_id,
       text: scriptForm.text,
       answer: scriptForm.answer,
       updated_at: new Date().toISOString()
@@ -635,16 +612,6 @@ export default function KnowledgePage() {
     // 立即更新UI
     setScripts(scripts.map(s => s.id === scriptForm.id ? optimisticScript : s))
     
-    // 如果是新场景，立即更新场景列表
-    const isNewScenario = !scriptScenarios.includes(scriptForm.scenario)
-    const originalScenarios = [...scriptScenarios]
-    if (isNewScenario) {
-      const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他')
-      const sortedScenarios = [...filteredScenarios, scriptForm.scenario]
-        .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-      setScriptScenarios([...sortedScenarios, '其他'])
-    }
-    
     // 关闭模态框
     setShowEditModal(false)
     setScriptForm(DEFAULT_SCRIPT_FORM)
@@ -653,7 +620,7 @@ export default function KnowledgePage() {
       const { data, error } = await supabase
         .from('knowledge_scripts')
         .update({
-          scenario: scriptForm.scenario,
+          scenario_id: scriptForm.scenario_id,
           text: scriptForm.text,
           answer: scriptForm.answer
         })
@@ -669,7 +636,7 @@ export default function KnowledgePage() {
             data[0].id,
             'script',
             {
-              scenario: scriptForm.scenario,
+              scenario: scriptForm.scenario_id,
               text: scriptForm.text,
               answer: scriptForm.answer
             }
@@ -684,14 +651,11 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setScripts(originalScripts)
-      if (isNewScenario) {
-        setScriptScenarios(originalScenarios)
-      }
       setError(err instanceof Error ? err.message : '编辑话术失败')
       // 重新打开模态框
       setScriptForm({
         id: optimisticScript.id,
-        scenario: optimisticScript.scenario,
+        scenario_id: optimisticScript.scenario_id,
         text: optimisticScript.text,
         answer: optimisticScript.answer
       })
@@ -772,7 +736,7 @@ export default function KnowledgePage() {
   // 筛选数据
   const filteredAbbreviations = abbreviations
     .filter(abbr => {
-      const categoryMatch = selectedCategory === 'all' || abbr.category === selectedCategory
+      const categoryMatch = selectedCategory === 'all' || abbr.category_id === selectedCategory
       const searchMatch = !searchTerm || 
         abbr.abbreviation.toLowerCase().includes(searchTerm.toLowerCase()) ||
         abbr.full_form.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -780,12 +744,15 @@ export default function KnowledgePage() {
       return categoryMatch && searchMatch
     })
     .sort((a, b) => {
-      // 特殊处理："其他"分类始终排在最后
-      if (a.category === '其他' && b.category !== '其他') return 1
-      if (b.category === '其他' && a.category !== '其他') return -1
+      // 特殊处理："Khác"分类始终排在最后
+      const aCategoryName = categories.find(cat => cat.id === a.category_id)?.name_vi || 'Khác'
+      const bCategoryName = categories.find(cat => cat.id === b.category_id)?.name_vi || 'Khác'
+      
+      if (aCategoryName === 'Khác' && bCategoryName !== 'Khác') return 1
+      if (bCategoryName === 'Khác' && aCategoryName !== 'Khác') return -1
       
       // 首先按分类排序
-      const categoryCompare = a.category.localeCompare(b.category, 'zh-CN', { sensitivity: 'accent' })
+      const categoryCompare = aCategoryName.localeCompare(bCategoryName, 'zh-CN', { sensitivity: 'accent' })
       if (categoryCompare !== 0) return categoryCompare
       
       // 分类相同时，按缩写排序
@@ -794,19 +761,22 @@ export default function KnowledgePage() {
 
   const filteredScripts = scripts
     .filter(script => {
-      const categoryMatch = selectedCategory === 'all' || script.scenario === selectedCategory
+      const categoryMatch = selectedCategory === 'all' || script.scenario_id === selectedCategory
       const searchMatch = !searchTerm || 
         script.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
         script.answer.toLowerCase().includes(searchTerm.toLowerCase())
       return categoryMatch && searchMatch
     })
     .sort((a, b) => {
-      // 特殊处理："其他"场景始终排在最后
-      if (a.scenario === '其他' && b.scenario !== '其他') return 1
-      if (b.scenario === '其他' && a.scenario !== '其他') return -1
+      // 特殊处理："Khác"场景始终排在最后
+      const aScenarioName = scenarios.find(sc => sc.id === a.scenario_id)?.name_vi || 'Khác'
+      const bScenarioName = scenarios.find(sc => sc.id === b.scenario_id)?.name_vi || 'Khác'
+      
+      if (aScenarioName === 'Khác' && bScenarioName !== 'Khác') return 1
+      if (bScenarioName === 'Khác' && aScenarioName !== 'Khác') return -1
       
       // 首先按场景排序
-      const scenarioCompare = a.scenario.localeCompare(b.scenario, 'zh-CN', { sensitivity: 'accent' })
+      const scenarioCompare = aScenarioName.localeCompare(bScenarioName, 'zh-CN', { sensitivity: 'accent' })
       if (scenarioCompare !== 0) return scenarioCompare
       
       // 场景相同时，按用户对话内容排序
@@ -826,11 +796,20 @@ export default function KnowledgePage() {
     if (activeTab === 'abbreviations') {
       const abbr = item as Abbreviation
       setAbbreviationForm({
-        ...abbr,
+        id: abbr.id,
+        category_id: abbr.category_id || '',
+        abbreviation: abbr.abbreviation,
+        full_form: abbr.full_form,
         description: abbr.description || ''
       })
     } else {
-      setScriptForm(item as ConversationScript)
+      const script = item as ConversationScript
+      setScriptForm({
+        id: script.id,
+        scenario_id: script.scenario_id || '',
+        text: script.text,
+        answer: script.answer
+      })
     }
     setShowEditModal(true)
   }
@@ -839,72 +818,119 @@ export default function KnowledgePage() {
   async function handleEditCategory(e: React.FormEvent) {
     e.preventDefault()
     try {
-      const { oldName, newName } = editCategoryForm
-      if (!newName.trim() || oldName === newName.trim()) return
+      const { categoryId, name_vi, name_cn } = editCategoryForm
+      if (!name_vi.trim()) return
 
-      // 检查新名称是否已存在
-      const currentCategories = activeTab === 'abbreviations' ? abbreviationCategories : scriptScenarios
-      if (currentCategories.includes(newName.trim()) && newName.trim() !== oldName) {
+      // 检查新的越南文名称是否已存在（排除当前编辑的分类）
+      const currentCategories = activeTab === 'abbreviations' ? categories : scenarios
+      if (currentCategories.some(cat => cat.id !== categoryId && cat.name_vi === name_vi.trim())) {
         setError('该分类名称已存在')
         return
       }
 
       if (activeTab === 'abbreviations') {
-        // 更新数据库中所有对应分类的记录
+        // 更新分类表
         const { error: updateError } = await supabase
-          .from('knowledge_abbreviations')
-          .update({ category: newName.trim() })
-          .eq('category', oldName)
+          .from('knowledge_categories')
+          .update({ 
+            name_vi: name_vi.trim(),
+            name_cn: name_cn.trim() || null
+          })
+          .eq('id', categoryId)
 
         if (updateError) throw updateError
 
         // 更新本地状态
-        setAbbreviations(abbreviations.map(abbr => 
-          abbr.category === oldName ? { ...abbr, category: newName.trim() } : abbr
+        setCategories(categories.map(cat => 
+          cat.id === categoryId ? { 
+            ...cat, 
+            name_vi: name_vi.trim(),
+            name_cn: name_cn.trim() || null
+          } : cat
         ))
-        
-        // 更新分类列表
-        const filteredCategories = abbreviationCategories.filter(cat => cat !== '其他' && cat !== oldName)
-        const sortedCategories = [...filteredCategories, newName.trim()]
-          .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-        setAbbreviationCategories([...sortedCategories, '其他'])
       } else {
-        // 更新数据库中所有对应场景的记录
+        // 更新场景表
         const { error: updateError } = await supabase
-          .from('knowledge_scripts')
-          .update({ scenario: newName.trim() })
-          .eq('scenario', oldName)
+          .from('knowledge_scenarios')
+          .update({ 
+            name_vi: name_vi.trim(),
+            name_cn: name_cn.trim() || null
+          })
+          .eq('id', categoryId)
 
         if (updateError) throw updateError
 
         // 更新本地状态
-        setScripts(scripts.map(script => 
-          script.scenario === oldName ? { ...script, scenario: newName.trim() } : script
+        setScenarios(scenarios.map(sc => 
+          sc.id === categoryId ? { 
+            ...sc, 
+            name_vi: name_vi.trim(),
+            name_cn: name_cn.trim() || null
+          } : sc
         ))
-        
-        // 更新场景列表
-        const filteredScenarios = scriptScenarios.filter(sc => sc !== '其他' && sc !== oldName)
-        const sortedScenarios = [...filteredScenarios, newName.trim()]
-          .sort((a, b) => a.localeCompare(b, 'zh-CN', { sensitivity: 'accent' }))
-        setScriptScenarios([...sortedScenarios, '其他'])
-      }
-
-      // 如果当前选中的分类被修改了，更新选中状态
-      if (selectedCategory === oldName) {
-        setSelectedCategory(newName.trim())
       }
 
       setShowEditCategoryModal(false)
-      setEditCategoryForm({ oldName: '', newName: '' })
+      setEditCategoryForm({ categoryId: '', name_vi: '', name_cn: '' })
     } catch (err) {
       setError(err instanceof Error ? err.message : '编辑分类失败')
     }
   }
 
   // 打开编辑分类模态框
-  const openEditCategoryModal = (categoryName: string) => {
-    setEditCategoryForm({ oldName: categoryName, newName: categoryName })
-    setShowEditCategoryModal(true)
+  const openEditCategoryModal = (categoryId: string) => {
+    const currentCategories = activeTab === 'abbreviations' ? categories : scenarios
+    const category = currentCategories.find(cat => cat.id === categoryId)
+    
+    if (category) {
+      setEditCategoryForm({ 
+        categoryId: category.id,
+        name_vi: category.name_vi,
+        name_cn: category.name_cn || ''
+      })
+      setShowEditCategoryModal(true)
+    }
+  }
+
+  // 添加新分类/场景
+  const addNewCategory = async (newName: string) => {
+    try {
+      if (activeTab === 'abbreviations') {
+        // 添加新分类
+        const { data, error } = await supabase
+          .from('knowledge_categories')
+          .insert([{
+            name_vi: newName,
+            name_cn: null,
+            sort_order: 1000
+          }])
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setCategories(prev => [...prev, data])
+        }
+      } else {
+        // 添加新场景
+        const { data, error } = await supabase
+          .from('knowledge_scenarios')
+          .insert([{
+            name_vi: newName,
+            name_cn: null,
+            sort_order: 1000
+          }])
+          .select()
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setScenarios(prev => [...prev, data])
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '添加分类失败')
+    }
   }
 
   if (loading) return <div className="p-6"><LoadingSpinner size="large" text="加载知识库..." /></div>
@@ -1016,7 +1042,7 @@ export default function KnowledgePage() {
                   >
                     {option.label} ({option.count})
                   </button>
-                  {option.value !== '其他' && (
+                  {option.value !== 'Khác' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -1065,7 +1091,7 @@ export default function KnowledgePage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
                       <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex-shrink-0">
-                        {abbr.category}
+                        {abbr.category_id ? formatCategoryName(categories.find(cat => cat.id === abbr.category_id)) : 'Khác'}
                       </span>
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <span className="font-bold text-lg text-gray-900 dark:text-gray-100 flex-shrink-0">
@@ -1123,7 +1149,7 @@ export default function KnowledgePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-3 mb-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                          {script.scenario}
+                          {script.scenario_id ? formatCategoryName(scenarios.find(sc => sc.id === script.scenario_id)) : 'Khác'}
                         </span>
                       </div>
                       
@@ -1213,17 +1239,24 @@ export default function KnowledgePage() {
         isOpen={showEditCategoryModal}
         onClose={() => {
           setShowEditCategoryModal(false)
-          setEditCategoryForm({ oldName: '', newName: '' })
+          setEditCategoryForm({ categoryId: '', name_vi: '', name_cn: '' })
         }}
         title={`编辑${activeTab === 'abbreviations' ? '分类' : '场景'}`}
       >
         <Form onSubmit={handleEditCategory}>
           <Input
-            label={`${activeTab === 'abbreviations' ? '分类' : '场景'}名称`}
-            value={editCategoryForm.newName}
-            onChange={(e) => setEditCategoryForm({...editCategoryForm, newName: e.target.value})}
+            label={activeTab === 'abbreviations' ? 'Danh mục từ viết tắt' : 'Tình huống hội thoại'}
+            value={editCategoryForm.name_vi}
+            onChange={(e) => setEditCategoryForm({...editCategoryForm, name_vi: e.target.value})}
             required
-            placeholder={`输入新的${activeTab === 'abbreviations' ? '分类' : '场景'}名称`}
+            placeholder={`输入${activeTab === 'abbreviations' ? '分类' : '场景'}的越南文名称`}
+          />
+          
+          <Input
+            label={activeTab === 'abbreviations' ? '缩写分类' : '话术场景'}
+            value={editCategoryForm.name_cn}
+            onChange={(e) => setEditCategoryForm({...editCategoryForm, name_cn: e.target.value})}
+            placeholder={`输入${activeTab === 'abbreviations' ? '分类' : '场景'}的中文名称（可选）`}
           />
           
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
@@ -1231,7 +1264,7 @@ export default function KnowledgePage() {
               <div className="w-4 h-4 bg-yellow-400 rounded-full flex-shrink-0 mt-0.5"></div>
               <div className="text-sm text-yellow-800 dark:text-yellow-200">
                 <p className="font-medium mb-1">注意</p>
-                <p>修改分类名称将会更新所有使用该分类的{activeTab === 'abbreviations' ? '缩写' : '话术'}记录。</p>
+                <p>修改分类名称将会更新该分类的显示名称，但不会影响已关联的{activeTab === 'abbreviations' ? '缩写' : '话术'}记录。</p>
               </div>
             </div>
           </div>
@@ -1268,8 +1301,8 @@ export default function KnowledgePage() {
             <>
               <CustomSelect
                 label="分类"
-                value={abbreviationForm.category}
-                onChange={(value) => setAbbreviationForm({...abbreviationForm, category: value})}
+                value={abbreviationForm.category_id}
+                onChange={(value) => setAbbreviationForm({...abbreviationForm, category_id: value})}
                 options={getFormOptions()}
                 required
                 allowAdd
@@ -1305,8 +1338,8 @@ export default function KnowledgePage() {
             <>
               <CustomSelect
                 label="场景"
-                value={scriptForm.scenario}
-                onChange={(value) => setScriptForm({...scriptForm, scenario: value})}
+                value={scriptForm.scenario_id}
+                onChange={(value) => setScriptForm({...scriptForm, scenario_id: value})}
                 options={getFormOptions()}
                 required
                 allowAdd
