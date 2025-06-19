@@ -41,6 +41,7 @@ interface Abbreviation {
   abbreviation: string
   full_form: string
   description: string | null
+  is_deleted?: boolean  // 软删除标记
   created_at: string
   updated_at: string
 }
@@ -52,11 +53,12 @@ interface ConversationScript {
   scenario_data?: KnowledgeScenario  // 关联的场景数据
   text: string
   answer: string
+  is_deleted?: boolean  // 软删除标记
   created_at: string
   updated_at: string
 }
 
-// 自定义Select组件 - 支持添加新选项
+// 自定义Select组件 - 移除添加新选项功能
 interface CustomSelectProps {
   label?: string
   value: string
@@ -64,26 +66,11 @@ interface CustomSelectProps {
   options: { value: string; label: string }[]
   required?: boolean
   placeholder?: string
-  allowAdd?: boolean
-  addLabel?: string
-  onAddNew?: (newValue: string) => void
 }
 
-function CustomSelect({ label, value, onChange, options, required, placeholder, allowAdd, addLabel, onAddNew }: CustomSelectProps) {
+function CustomSelect({ label, value, onChange, options, required, placeholder }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isAdding, setIsAdding] = useState(false)
-  const [newValue, setNewValue] = useState('')
   const selectedOption = options.find(opt => opt.value === value)
-
-  const handleAddNew = () => {
-    if (newValue.trim() && onAddNew) {
-      onAddNew(newValue.trim())
-      onChange(newValue.trim())
-      setNewValue('')
-      setIsAdding(false)
-      setIsOpen(false)
-    }
-  }
 
   return (
     <div className="space-y-2">
@@ -109,81 +96,26 @@ function CustomSelect({ label, value, onChange, options, required, placeholder, 
           <>
             <div 
               className="fixed inset-0 z-10" 
-              onClick={() => {
-                setIsOpen(false)
-                setIsAdding(false)
-                setNewValue('')
-              }}
+              onClick={() => setIsOpen(false)}
             />
             <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white dark:bg-[var(--component-background)] border border-gray-200 dark:border-[var(--border-color)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {!isAdding ? (
-                <>
-                  {options.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        onChange(option.value)
-                        setIsOpen(false)
-                      }}
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${
-                        value === option.value 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                  {allowAdd && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAdding(true)}
-                      className="w-full px-3 py-2 text-left text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-150 border-t border-gray-200 dark:border-gray-600 flex items-center space-x-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>{addLabel || '添加新选项'}</span>
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="p-3">
-                  <input
-                    type="text"
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    placeholder={addLabel || '输入新选项'}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-[var(--border-color)] bg-gray-50 dark:bg-[var(--background)] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 mb-2"
-                    autoFocus
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddNew()
-                      }
-                    }}
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      type="button"
-                      onClick={handleAddNew}
-                      disabled={!newValue.trim()}
-                      className="flex-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                    >
-                      添加
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAdding(false)
-                        setNewValue('')
-                      }}
-                      className="flex-1 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors duration-150"
-                    >
-                      取消
-                    </button>
-                  </div>
-                </div>
-              )}
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${
+                    value === option.value 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-gray-900 dark:text-gray-100'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </>
         )}
@@ -240,12 +172,19 @@ export default function KnowledgePage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false)
+  const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false)
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false)
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string>('')
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string>('')
   const [deleting, setDeleting] = useState(false)
   const [showTestPanel, setShowTestPanel] = useState(false)
+  const [newCategoryForm, setNewCategoryForm] = useState({
+    name_vi: '',
+    name_cn: ''
+  })
   
   // 表单状态
   const [abbreviationForm, setAbbreviationForm] = useState(DEFAULT_ABBREVIATION_FORM)
@@ -402,9 +341,14 @@ export default function KnowledgePage() {
     setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
 
     try {
+      // 获取分类名称
+      const selectedCategory = categories.find(c => c.id === abbreviationForm.category_id)
+      const categoryName = selectedCategory ? (selectedCategory.name_cn || selectedCategory.name_vi) : 'Khác'
+      
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
         .insert([{
+          category: categoryName,        // 传递分类名称以满足NOT NULL约束
           category_id: abbreviationForm.category_id,
           abbreviation: abbreviationForm.abbreviation,
           full_form: abbreviationForm.full_form,
@@ -477,9 +421,14 @@ export default function KnowledgePage() {
     setScriptForm(DEFAULT_SCRIPT_FORM)
 
     try {
+      // 获取场景名称
+      const selectedScenario = scenarios.find(s => s.id === scriptForm.scenario_id)
+      const scenarioName = selectedScenario ? (selectedScenario.name_cn || selectedScenario.name_vi) : 'Khác'
+      
       const { data, error } = await supabase
         .from('knowledge_scripts')
         .insert([{
+          scenario: scenarioName,        // 传递场景名称以满足NOT NULL约束
           scenario_id: scriptForm.scenario_id,
           text: scriptForm.text,
           answer: scriptForm.answer
@@ -546,9 +495,14 @@ export default function KnowledgePage() {
     setAbbreviationForm(DEFAULT_ABBREVIATION_FORM)
 
     try {
+      // 获取分类名称
+      const selectedCategory = categories.find(c => c.id === abbreviationForm.category_id)
+      const categoryName = selectedCategory ? (selectedCategory.name_cn || selectedCategory.name_vi) : 'Khác'
+      
       const { data, error } = await supabase
         .from('knowledge_abbreviations')
         .update({
+          category: categoryName,        // 传递分类名称以满足NOT NULL约束
           category_id: abbreviationForm.category_id,
           abbreviation: abbreviationForm.abbreviation,
           full_form: abbreviationForm.full_form,
@@ -617,9 +571,14 @@ export default function KnowledgePage() {
     setScriptForm(DEFAULT_SCRIPT_FORM)
 
     try {
+      // 获取场景名称
+      const selectedScenario = scenarios.find(s => s.id === scriptForm.scenario_id)
+      const scenarioName = selectedScenario ? (selectedScenario.name_cn || selectedScenario.name_vi) : 'Khác'
+      
       const { data, error } = await supabase
         .from('knowledge_scripts')
         .update({
+          scenario: scenarioName,        // 传递场景名称以满足NOT NULL约束
           scenario_id: scriptForm.scenario_id,
           text: scriptForm.text,
           answer: scriptForm.answer
@@ -893,15 +852,15 @@ export default function KnowledgePage() {
   }
 
   // 添加新分类/场景
-  const addNewCategory = async (newName: string) => {
+  const addNewCategory = async (name_vi: string, name_cn?: string): Promise<string | undefined> => {
     try {
       if (activeTab === 'abbreviations') {
         // 添加新分类
         const { data, error } = await supabase
           .from('knowledge_categories')
           .insert([{
-            name_vi: newName,
-            name_cn: null,
+            name_vi: name_vi,
+            name_cn: name_cn || null,
             sort_order: 1000
           }])
           .select()
@@ -910,14 +869,15 @@ export default function KnowledgePage() {
         if (error) throw error
         if (data) {
           setCategories(prev => [...prev, data])
+          return data.id
         }
       } else {
         // 添加新场景
         const { data, error } = await supabase
           .from('knowledge_scenarios')
           .insert([{
-            name_vi: newName,
-            name_cn: null,
+            name_vi: name_vi,
+            name_cn: name_cn || null,
             sort_order: 1000
           }])
           .select()
@@ -926,7 +886,75 @@ export default function KnowledgePage() {
         if (error) throw error
         if (data) {
           setScenarios(prev => [...prev, data])
+          return data.id
         }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '添加分类失败')
+    }
+  }
+
+  // 删除分类/场景
+  const handleDeleteCategory = async () => {
+    setDeleting(true)
+    
+    try {
+      if (activeTab === 'abbreviations') {
+        // 软删除分类
+        const { error } = await supabase
+          .from('knowledge_categories')
+          .update({ is_deleted: true })
+          .eq('id', deleteCategoryId)
+
+        if (error) throw error
+        
+        // 更新本地状态
+        setCategories(categories.filter(cat => cat.id !== deleteCategoryId))
+        
+        // 如果当前选中的是被删除的分类，切换到"全部"
+        if (selectedCategory === deleteCategoryId) {
+          setSelectedCategory('all')
+        }
+      } else {
+        // 软删除场景
+        const { error } = await supabase
+          .from('knowledge_scenarios')
+          .update({ is_deleted: true })
+          .eq('id', deleteCategoryId)
+
+        if (error) throw error
+        
+        // 更新本地状态
+        setScenarios(scenarios.filter(sc => sc.id !== deleteCategoryId))
+        
+        // 如果当前选中的是被删除的场景，切换到"全部"
+        if (selectedCategory === deleteCategoryId) {
+          setSelectedCategory('all')
+        }
+      }
+      
+      setShowDeleteCategoryModal(false)
+      setDeleteCategoryId('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除分类失败')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // 添加分类/场景
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCategoryForm.name_vi.trim()) return
+    
+    try {
+      const newId = await addNewCategory(
+        newCategoryForm.name_vi.trim(), 
+        newCategoryForm.name_cn.trim() || undefined
+      )
+      if (newId) {
+        setNewCategoryForm({ name_vi: '', name_cn: '' })
+        setShowAddCategoryModal(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '添加分类失败')
@@ -952,6 +980,8 @@ export default function KnowledgePage() {
             onClick={() => {
               setActiveTab('abbreviations')
               setSelectedCategory('all')
+              setShowAddCategoryModal(false)
+              setNewCategoryForm({ name_vi: '', name_cn: '' })
             }}
             className={`flex items-center space-x-3 px-8 py-6 font-medium transition-all duration-200 rounded-l-2xl flex-1 ${
               activeTab === 'abbreviations'
@@ -973,6 +1003,8 @@ export default function KnowledgePage() {
             onClick={() => {
               setActiveTab('scripts')
               setSelectedCategory('all')
+              setShowAddCategoryModal(false)
+              setNewCategoryForm({ name_vi: '', name_cn: '' })
             }}
             className={`flex items-center space-x-3 px-8 py-6 font-medium transition-all duration-200 rounded-r-2xl flex-1 ${
               activeTab === 'scripts'
@@ -1014,9 +1046,9 @@ export default function KnowledgePage() {
       )}
 
       {/* 筛选和操作区域 */}
-      <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 mb-6 neumorphic-subtle">
+      <div className="space-y-4 mb-6">
         {/* 分类筛选 */}
-        <div className="mb-4">
+        <div className="bg-white dark:bg-[var(--component-background)] rounded-2xl shadow-sm border border-gray-100 dark:border-[var(--border-color)] p-6 neumorphic-subtle">
           <div className="flex items-start space-x-3 mb-3">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">筛选：</span>
             <div className="flex flex-wrap gap-2 flex-1">
@@ -1056,6 +1088,15 @@ export default function KnowledgePage() {
                   )}
                 </div>
               ))}
+              
+              {/* 添加新分类按钮 */}
+              <button
+                onClick={() => setShowAddCategoryModal(true)}
+                className="px-3 py-1.5 text-sm font-medium rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 flex items-center space-x-1"
+              >
+                <Plus className="w-3 h-3" />
+                <span>添加{activeTab === 'abbreviations' ? '分类' : '场景'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1234,6 +1275,47 @@ export default function KnowledgePage() {
         </div>
       )}
 
+      {/* 添加分类模态框 */}
+      <Modal
+        isOpen={showAddCategoryModal}
+        onClose={() => {
+          setShowAddCategoryModal(false)
+          setNewCategoryForm({ name_vi: '', name_cn: '' })
+        }}
+        title={`添加${activeTab === 'abbreviations' ? '分类' : '场景'}`}
+      >
+        <Form onSubmit={handleAddCategory}>
+          <Input
+            label={activeTab === 'abbreviations' ? 'Danh mục từ viết tắt *' : 'Tình huống hội thoại *'}
+            value={newCategoryForm.name_vi}
+            onChange={(e) => setNewCategoryForm({...newCategoryForm, name_vi: e.target.value})}
+            required
+            placeholder={`输入${activeTab === 'abbreviations' ? '分类' : '场景'}的越南文名称`}
+          />
+          
+          <Input
+            label={activeTab === 'abbreviations' ? '缩写分类' : '话术场景'}
+            value={newCategoryForm.name_cn}
+            onChange={(e) => setNewCategoryForm({...newCategoryForm, name_cn: e.target.value})}
+            placeholder={`输入${activeTab === 'abbreviations' ? '分类' : '场景'}的中文名称（可选）`}
+          />
+          
+
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-[var(--border-color)]">
+            <Button 
+              variant="secondary" 
+              type="button" 
+              onClick={() => setShowAddCategoryModal(false)}
+            >
+              取消
+            </Button>
+            <Button type="submit" neumorphic>
+              创建
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
       {/* 编辑分类模态框 */}
       <Modal
         isOpen={showEditCategoryModal}
@@ -1269,17 +1351,32 @@ export default function KnowledgePage() {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-[var(--border-color)]">
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-[var(--border-color)]">
             <Button 
-              variant="secondary" 
+              variant="ghost" 
               type="button" 
-              onClick={() => setShowEditCategoryModal(false)}
+              onClick={() => {
+                setDeleteCategoryId(editCategoryForm.categoryId)
+                setShowDeleteCategoryModal(true)
+              }}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              取消
+              <Trash2 className="w-4 h-4 mr-2" />
+              删除{activeTab === 'abbreviations' ? '分类' : '场景'}
             </Button>
-            <Button type="submit" neumorphic>
-              保存
-            </Button>
+            
+            <div className="flex space-x-3">
+              <Button 
+                variant="secondary" 
+                type="button" 
+                onClick={() => setShowEditCategoryModal(false)}
+              >
+                取消
+              </Button>
+              <Button type="submit" neumorphic>
+                保存
+              </Button>
+            </div>
           </div>
         </Form>
       </Modal>
@@ -1305,9 +1402,6 @@ export default function KnowledgePage() {
                 onChange={(value) => setAbbreviationForm({...abbreviationForm, category_id: value})}
                 options={getFormOptions()}
                 required
-                allowAdd
-                addLabel="添加新分类"
-                onAddNew={addNewCategory}
               />
 
               <Input
@@ -1342,9 +1436,6 @@ export default function KnowledgePage() {
                 onChange={(value) => setScriptForm({...scriptForm, scenario_id: value})}
                 options={getFormOptions()}
                 required
-                allowAdd
-                addLabel="添加新场景"
-                onAddNew={addNewCategory}
               />
 
               <Textarea
@@ -1395,6 +1486,21 @@ export default function KnowledgePage() {
         onConfirm={handleDelete}
         title="确认删除"
         message={`确定要删除这个${activeTab === 'abbreviations' ? '缩写' : '话术'}吗？此操作无法撤销。`}
+        confirmText={deleting ? '删除中...' : '删除'}
+        cancelText="取消"
+        type="danger"
+      />
+
+      {/* 删除分类确认模态框 */}
+      <ConfirmModal
+        isOpen={showDeleteCategoryModal}
+        onClose={() => {
+          setShowDeleteCategoryModal(false)
+          setDeleteCategoryId('')
+        }}
+        onConfirm={handleDeleteCategory}
+        title={`确认删除${activeTab === 'abbreviations' ? '分类' : '场景'}`}
+        message={`该${activeTab === 'abbreviations' ? '分类' : '场景'}下的所有${activeTab === 'abbreviations' ? '缩写' : '话术'}将被删除。`}
         confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
