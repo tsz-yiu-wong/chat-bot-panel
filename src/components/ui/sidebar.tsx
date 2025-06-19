@@ -15,7 +15,8 @@ import {
   Moon,
   SunMoon,
   BookOpen,
-  Hash
+  Hash,
+  FlaskConical
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { AdminUser } from '@/lib/supabase'
@@ -27,6 +28,7 @@ const allNavigation = [
   { name: '知识库', href: '/knowledge', icon: BookOpen, roles: ['operator', 'admin', 'super_admin'] },
   { name: '话题库', href: '/topics', icon: Hash, roles: ['operator', 'admin', 'super_admin'] },
   { name: '用户', href: '/users', icon: Users, roles: ['viewer', 'operator', 'admin', 'super_admin'] },
+  { name: '测试', href: '/test-chat', icon: FlaskConical, roles: ['super_admin', 'admin', 'operator'] },
   { name: '设置', href: '/settings', icon: Settings, roles: ['admin', 'super_admin'] },
 ]
 

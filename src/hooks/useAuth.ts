@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getCurrentUser, clearCurrentUser, checkPermission, type AdminUser } from '@/lib/supabase'
+import { PERMISSIONS } from '@/lib/permissions';
 
 export function useAuth(requireAuth: boolean = true) {
   const [user, setUser] = useState<AdminUser | null>(null)
@@ -84,13 +85,7 @@ export function useAuth(requireAuth: boolean = true) {
 }
 
 function getFirstAllowedPage(role: string): string {
-  const permissions: Record<string, string[]> = {
-    'viewer': ['/users'],
-    'operator': ['/users', '/topics', '/knowledge'],
-    'admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings'],
-    'super_admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings']
-  }
-  const allowedPages = permissions[role] || []
+  const allowedPages = PERMISSIONS[role] || []
   const result = allowedPages[0] || '/users'
   return result
 } 

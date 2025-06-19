@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { PERMISSIONS } from './permissions'
 
 // 检查Supabase配置
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -148,13 +149,6 @@ export function clearCurrentUser(): void {
 
 // 权限检查
 export function checkPermission(userRole: string, requiredPage: string): boolean {
-  const permissions: Record<string, string[]> = {
-    'viewer': ['/users'],
-    'operator': ['/users', '/topics', '/knowledge'],
-    'admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings'],
-    'super_admin': ['/dashboard', '/bots', '/prompts', '/knowledge', '/topics', '/users', '/settings']
-  }
-  
-  const allowedPages = permissions[userRole] || []
+  const allowedPages = PERMISSIONS[userRole] || []
   return allowedPages.includes(requiredPage)
 } 
