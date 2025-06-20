@@ -9,6 +9,7 @@ import { Form, Input, Textarea } from '@/components/ui/form'
 import { FilterTabs } from '@/components/ui/filter-tabs'
 import { PageHeader } from '@/components/ui/page-header'
 import { LoadingSpinner } from '@/components/ui/loading'
+import { Toast, useToast } from '@/components/ui/toast'
 
 // 类型定义
 interface Prompt {
@@ -356,6 +357,9 @@ export default function PromptsPage() {
   const [deleting, setDeleting] = useState(false)
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA)
 
+  // 添加 Toast 状态
+  const { toast, showSuccess, showError, hideToast } = useToast()
+
   // 加载提示词数据
   useEffect(() => {
     fetchPrompts()
@@ -426,12 +430,16 @@ export default function PromptsPage() {
       if (data?.[0]) {
         // 替换临时记录为真实记录
         setPrompts(prev => prev.map(p => p.id === tempId ? data[0] : p))
+        // 显示成功提示
+        showSuccess('创建提示词成功')
       }
     } catch (err) {
       // 失败时回滚状态
       setPrompts(originalPrompts)
       console.error('Error creating prompt:', err)
-      setError(err instanceof Error ? err.message : '创建提示词失败')
+      const errorMessage = err instanceof Error ? err.message : '创建提示词失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开模态框并恢复表单数据
       setFormData({
@@ -468,10 +476,15 @@ export default function PromptsPage() {
         .eq('id', currentDeleteId)
 
       if (error) throw error
+      
+      // 显示删除成功提示（红色）
+      showError('删除提示词成功')
     } catch (err) {
       // 失败时回滚状态
       setPrompts(originalPrompts)
-      setError(err instanceof Error ? err.message : '删除提示词失败')
+      const errorMessage = err instanceof Error ? err.message : '删除提示词失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开删除模态框
       setDeleteId(currentDeleteId)
@@ -521,10 +534,14 @@ export default function PromptsPage() {
 
       // 成功后更新为真实数据
       setPrompts(prompts.map(p => p.id === formData.id ? (data?.[0] ?? p) : p))
+      // 显示成功提示
+      showSuccess('编辑提示词成功')
     } catch (err) {
       // 失败时回滚状态
       setPrompts(originalPrompts)
-      setError(err instanceof Error ? err.message : '编辑提示词失败')
+      const errorMessage = err instanceof Error ? err.message : '编辑提示词失败'
+      setError(errorMessage)
+      showError(errorMessage)
       // 重新打开模态框
       setFormData({
         id: optimisticPrompt.id,
@@ -832,6 +849,15 @@ export default function PromptsPage() {
         confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
+      />
+
+      {/* Toast 通知 */}
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={3000}
       />
     </div>
   )

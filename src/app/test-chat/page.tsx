@@ -272,8 +272,8 @@ export default function TestChatPage() {
   const selectClass = "w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-      <div className="container mx-auto p-4">
+    <div className="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+      <div className="container mx-auto p-4 h-full">
         <h1 className="text-2xl font-bold mb-4">聊天机器人测试面板</h1>
 
         {/* 设置栏 */}

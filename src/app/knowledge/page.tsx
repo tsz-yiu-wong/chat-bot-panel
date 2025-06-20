@@ -8,6 +8,7 @@ import { Form, Input, Textarea } from '@/components/ui/form'
 import { SearchBox } from '@/components/ui/search-box'
 import { PageHeader } from '@/components/ui/page-header'
 import { LoadingSpinner } from '@/components/ui/loading'
+import { Toast, useToast } from '@/components/ui/toast'
 import { VectorTestComponent } from './test-vector'
 import { supabase } from '@/lib/supabase'
 import { updateKnowledgeVectors, deleteKnowledgeVectors } from '@/lib/vector'
@@ -191,6 +192,9 @@ export default function KnowledgePage() {
   const [scriptForm, setScriptForm] = useState(DEFAULT_SCRIPT_FORM)
   const [editCategoryForm, setEditCategoryForm] = useState(DEFAULT_EDIT_CATEGORY_FORM)
 
+  // 添加 Toast 状态
+  const { toast, showSuccess, showError, hideToast } = useToast()
+
   // 加载数据
   useEffect(() => {
     if (activeTab === 'abbreviations') {
@@ -362,6 +366,9 @@ export default function KnowledgePage() {
         // 替换临时记录为真实记录
         setAbbreviations(prev => prev.map(a => a.id === tempId ? data[0] : a))
         
+        // 显示成功提示
+        showSuccess('创建缩写成功')
+        
         // 异步更新向量
         try {
           await updateKnowledgeVectors(
@@ -381,7 +388,9 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setAbbreviations(originalAbbreviations)
-      setError(err instanceof Error ? err.message : '创建缩写失败')
+      const errorMessage = err instanceof Error ? err.message : '创建缩写失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开模态框并恢复表单数据
       setAbbreviationForm({
@@ -441,6 +450,9 @@ export default function KnowledgePage() {
         // 替换临时记录为真实记录
         setScripts(prev => prev.map(s => s.id === tempId ? data[0] : s))
         
+        // 显示成功提示
+        showSuccess('创建话术成功')
+        
         // 异步更新向量
         try {
           await updateKnowledgeVectors(
@@ -459,7 +471,9 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setScripts(originalScripts)
-      setError(err instanceof Error ? err.message : '创建话术失败')
+      const errorMessage = err instanceof Error ? err.message : '创建话术失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开模态框并恢复表单数据
       setScriptForm({
@@ -514,6 +528,9 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
+        // 显示成功提示
+        showSuccess('编辑缩写成功')
+        
         // 更新所有相关向量 - 数据库触发器会重新生成向量记录，我们需要更新embedding
         try {
           await updateKnowledgeVectors(
@@ -536,7 +553,9 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setAbbreviations(originalAbbreviations)
-      setError(err instanceof Error ? err.message : '编辑缩写失败')
+      const errorMessage = err instanceof Error ? err.message : '编辑缩写失败'
+      setError(errorMessage)
+      showError(errorMessage)
       // 重新打开模态框
       setAbbreviationForm({
         id: optimisticAbbreviation.id,
@@ -589,6 +608,9 @@ export default function KnowledgePage() {
       if (error) throw error
 
       if (data?.[0]) {
+        // 显示成功提示
+        showSuccess('编辑话术成功')
+        
         // 更新所有相关向量 - 数据库触发器会重新生成向量记录，我们需要更新embedding
         try {
           await updateKnowledgeVectors(
@@ -610,7 +632,9 @@ export default function KnowledgePage() {
     } catch (err) {
       // 失败时回滚状态
       setScripts(originalScripts)
-      setError(err instanceof Error ? err.message : '编辑话术失败')
+      const errorMessage = err instanceof Error ? err.message : '编辑话术失败'
+      setError(errorMessage)
+      showError(errorMessage)
       // 重新打开模态框
       setScriptForm({
         id: optimisticScript.id,
@@ -658,6 +682,9 @@ export default function KnowledgePage() {
           console.error('Vector deletion failed:', vectorError)
           // 向量删除失败不影响主要删除操作
         }
+        
+        // 显示删除缩写成功提示（红色）
+        showError('删除缩写成功')
       } else {
         // 软删除话术记录
         const { error } = await supabase
@@ -674,6 +701,9 @@ export default function KnowledgePage() {
           console.error('Vector deletion failed:', vectorError)
           // 向量删除失败不影响主要删除操作
         }
+        
+        // 显示删除话术成功提示（红色）
+        showError('删除话术成功')
       }
     } catch (err) {
       // 失败时回滚状态
@@ -682,7 +712,9 @@ export default function KnowledgePage() {
       } else {
         setScripts(originalScripts)
       }
-      setError(err instanceof Error ? err.message : '删除失败')
+      const errorMessage = err instanceof Error ? err.message : '删除失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开删除模态框
       setDeleteId(currentDeleteId)
@@ -1504,6 +1536,15 @@ export default function KnowledgePage() {
         confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
+      />
+
+      {/* Toast 通知 */}
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={3000}
       />
     </div>
   )

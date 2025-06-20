@@ -9,6 +9,7 @@ import { Form, Input, Textarea } from '@/components/ui/form'
 import { SearchBox } from '@/components/ui/search-box'
 import { PageHeader } from '@/components/ui/page-header'
 import { LoadingSpinner } from '@/components/ui/loading'
+import { Toast, useToast } from '@/components/ui/toast'
 
 // 类型定义
 interface TopicCategory {
@@ -99,6 +100,9 @@ export default function TopicsPage() {
 
   // 优化搜索：添加防抖功能
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+
+  // 添加 Toast 状态
+  const { toast, showSuccess, showError, hideToast } = useToast()
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -251,6 +255,7 @@ export default function TopicsPage() {
         // 局部更新状态，避免重新获取所有数据
         if (data?.[0]) {
           setCategories(prev => [...prev, { ...data[0], subcategories: [] }])
+          showSuccess('创建大类成功')
         }
       } else if (selectedLevel === 'subcategory') {
         const category = categories.find(c => c.id === formData.category_id)
@@ -281,6 +286,7 @@ export default function TopicsPage() {
                 }
               : cat
           ))
+          showSuccess('创建小类成功')
         }
       } else if (selectedLevel === 'topic') {
         const category = categories.find(c => c.id === formData.category_id)
@@ -317,13 +323,16 @@ export default function TopicsPage() {
                 }
               : cat
           ))
+          showSuccess('创建话题成功')
         }
       }
 
       setShowCreateModal(false)
       resetFormData()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建失败')
+      const errorMessage = err instanceof Error ? err.message : '创建失败'
+      setError(errorMessage)
+      showError(errorMessage)
     }
   }
 
@@ -404,7 +413,8 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 成功后更新为真实数据
+        // 成功后显示提示并更新为真实数据
+        showSuccess('编辑大类成功')
         if (data?.[0]) {
           setCategories(prev => prev.map(category => 
             category.id === formData.id 
@@ -425,7 +435,8 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 成功后更新为真实数据
+        // 成功后显示提示并更新为真实数据
+        showSuccess('编辑小类成功')
         if (data?.[0]) {
           setCategories(prev => prev.map(category => ({
             ...category,
@@ -446,7 +457,8 @@ export default function TopicsPage() {
           
         if (error) throw error
         
-        // 成功后更新为真实数据
+        // 成功后显示提示并更新为真实数据
+        showSuccess('编辑话题成功')
         if (data?.[0]) {
           setCategories(prev => prev.map(category => ({
             ...category,
@@ -462,7 +474,9 @@ export default function TopicsPage() {
     } catch (err) {
       // 失败时回滚状态
       setCategories(originalCategories)
-      setError(err instanceof Error ? err.message : '编辑失败')
+      const errorMessage = err instanceof Error ? err.message : '编辑失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开模态框
       setShowEditModal(true)
@@ -537,6 +551,9 @@ export default function TopicsPage() {
           .eq('id', currentDeleteId)
           
         if (error) throw error
+        
+        // 显示删除大类成功提示（红色）
+        showError('删除大类成功')
       } else if (currentDeleteType === 'subcategory') {
         // 级联软删除：先删除所有相关话题，再删除小类
         const subcategory = originalCategories
@@ -561,6 +578,9 @@ export default function TopicsPage() {
           .eq('id', currentDeleteId)
           
         if (error) throw error
+        
+        // 显示删除小类成功提示（红色）
+        showError('删除小类成功')
       } else if (currentDeleteType === 'topic') {
         // 软删除话题
         const { error } = await supabase
@@ -569,11 +589,16 @@ export default function TopicsPage() {
           .eq('id', currentDeleteId)
           
         if (error) throw error
+        
+        // 显示删除话题成功提示（红色）
+        showError('删除话题成功')
       }
     } catch (err) {
       // 失败时回滚状态
       setCategories(originalCategories)
-      setError(err instanceof Error ? err.message : '删除失败')
+      const errorMessage = err instanceof Error ? err.message : '删除失败'
+      setError(errorMessage)
+      showError(errorMessage)
       
       // 重新打开删除模态框
       setDeleteId(currentDeleteId)
@@ -1026,6 +1051,15 @@ export default function TopicsPage() {
         confirmText={deleting ? '删除中...' : '删除'}
         cancelText="取消"
         type="danger"
+      />
+
+      {/* Toast 通知 */}
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={3000}
       />
     </div>
   )
