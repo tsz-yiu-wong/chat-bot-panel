@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/form'
-import { X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 interface SearchResult {
   id: string
@@ -41,9 +41,9 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
     setAbortController(controller)
     
     setLoading(true)
-    setError(null) // 清除之前的错误状态（包括取消状态）
-    setResults([]) // 清空之前的结果
-    setHasSearched(true) // 标记已经搜索过
+    setError(null)
+    setResults([])
+    setHasSearched(true)
     
     try {
       const response = await fetch('/api/search', {
@@ -57,10 +57,9 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
           similarity_threshold: threshold,
           document_type: activeTab === 'abbreviations' ? 'abbreviation' : 'script'
         }),
-        signal: controller.signal // 添加abort信号
+        signal: controller.signal
       })
 
-      // 检查是否被取消
       if (controller.signal.aborted) {
         return
       }
@@ -72,15 +71,13 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
 
       const data: SearchResponse = await response.json()
       
-      // 再次检查是否被取消（避免在解析响应时被取消）
       if (controller.signal.aborted) {
         return
       }
       
       setResults(data.results || [])
-      console.log('完整检索结果:', data)
+      console.log('知识库向量检索结果:', data)
     } catch (error) {
-      // 检查是否是取消错误
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('检索已被用户取消')
         setError('检索已取消')
@@ -105,14 +102,12 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
     }
   }
 
-  // 清除错误状态（当用户修改查询或阈值时）
+  // 清除错误状态
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
-    // 如果之前是取消状态，清除错误信息
     if (error === '检索已取消') {
       setError(null)
     }
-    // 当用户修改查询时，重置搜索状态
     if (hasSearched) {
       setHasSearched(false)
       setResults([])
@@ -122,12 +117,10 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
   const handleThresholdChange = (value: string) => {
     setThresholdInput(value)
     
-    // 如果之前是取消状态，清除错误信息
     if (error === '检索已取消') {
       setError(null)
     }
     
-    // 验证输入是否为合法数字
     if (value.trim() === '') {
       setThresholdError('请输入相似度阈值')
       return
@@ -144,7 +137,6 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
       return
     }
     
-    // 验证通过，更新阈值
     setThresholdError(null)
     setThreshold(num)
   }
@@ -156,8 +148,9 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
   }
 
   return (
-    <div className="p-6 bg-white dark:bg-[var(--component-background)] rounded-2xl border border-gray-100 dark:border-[var(--border-color)] neumorphic-subtle">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
+    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800/30">
+      <h3 className="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100 flex items-center">
+        <Search className="w-5 h-5 mr-2" />
         {activeTab === 'abbreviations' ? '缩写库' : '话术库'}向量检索测试
       </h3>
       
@@ -175,7 +168,7 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
             <Button 
               onClick={handleSearch}
               disabled={!query.trim() || !!thresholdError}
-              neumorphic
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               检索
             </Button>
@@ -183,10 +176,9 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
             <div className="flex space-x-2">
               <Button 
                 disabled
-                neumorphic
-                className="opacity-50 flex items-center space-x-2"
+                className="opacity-50 flex items-center space-x-2 bg-blue-600 text-white"
               >
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <span>检索中...</span>
               </Button>
               <Button 
@@ -202,24 +194,27 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
           )}
         </div>
 
-        <div className="flex items-center space-x-4">
-          <label className="text-sm text-gray-600 dark:text-gray-400">相似度阈值:</label>
-          <div className="flex flex-col">
-            <Input
-              type="text"
-              value={thresholdInput}
-              onChange={(e) => handleThresholdChange(e.target.value)}
-              placeholder="0.4"
-              className={`w-24 ${thresholdError ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-            {thresholdError && (
-              <span className="text-xs text-red-500 dark:text-red-400 mt-1">
-                {thresholdError}
-              </span>
-            )}
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600 dark:text-gray-400">相似度阈值:</label>
+            <div className="flex flex-col">
+              <Input
+                type="text"
+                value={thresholdInput}
+                onChange={(e) => handleThresholdChange(e.target.value)}
+                placeholder="0.4"
+                className={`w-20 ${thresholdError ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+              {thresholdError && (
+                <span className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  {thresholdError}
+                </span>
+              )}
+            </div>
           </div>
+          
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            (0.0-1.0, 越高越严格{loading ? '，检索中可点击取消按钮中断' : ''})
+            (0.0-1.0, 越高越严格)
           </span>
         </div>
       </div>
@@ -251,14 +246,10 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
             const scenarioText = result.metadata?.scenario ? String(result.metadata.scenario) : null
             
             return (
-            <div key={index} className="p-4 bg-gray-50 dark:bg-[var(--accent-background)] rounded-lg border border-gray-200 dark:border-[var(--border-color)]">
+            <div key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
-                    result.type === 'abbreviation' 
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                  }`}>
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                     {activeTab === 'abbreviations' && categoryText 
                       ? categoryText 
                       : activeTab === 'scripts' && scenarioText 
@@ -284,7 +275,7 @@ export function VectorTestComponent({ activeTab }: VectorTestComponentProps) {
       ) : hasSearched && !loading && (
         <div className="text-center py-8">
           <p className="text-gray-500 dark:text-gray-400">
-            在{activeTab === 'abbreviations' ? '缩写库' : '话术库'}中没有找到相关结果，尝试降低相似度阈值或使用不同的查询词
+            在{activeTab === 'abbreviations' ? '缩写库' : '话术库'}中没有找到匹配的结果，尝试降低相似度阈值或使用不同的查询词
           </p>
         </div>
       )}

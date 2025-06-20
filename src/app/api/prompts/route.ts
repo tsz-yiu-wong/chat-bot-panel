@@ -20,24 +20,46 @@ function createSupabaseServer() {
 }
 
 // GET - 获取所有Prompt（过滤软删除记录）
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
+    const url = new URL(request.url);
+    const promptId = url.searchParams.get('id');
 
-    // 获取Prompt列表 - 过滤软删除记录
-    const { data: prompts, error } = await supabase
-      .from('prompts')
-      .select('id, prompt_name:name')
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false });
+    if (promptId) {
+      // 获取单个prompt的详细信息
+      const { data: prompt, error } = await supabase
+        .from('prompts')
+        .select('*')
+        .eq('id', promptId)
+        .eq('is_deleted', false)
+        .single();
 
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) {
+        console.error('Database error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!prompt) {
+        return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ prompt });
+    } else {
+      // 获取Prompt列表 - 过滤软删除记录
+      const { data: prompts, error } = await supabase
+        .from('prompts')
+        .select('id, prompt_name:name')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Database error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ prompts });
     }
-
-    return NextResponse.json({ prompts });
   } catch (error) {
     console.error('Error fetching prompts:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

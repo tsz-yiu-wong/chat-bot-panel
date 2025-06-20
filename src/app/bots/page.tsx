@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, User, Image, BookOpen } from 'lucide-react'
+import { Plus, Trash2, User, Image, BookOpen, Search, ChevronDown, X } from 'lucide-react'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Form, Input } from '@/components/ui/form'
@@ -10,6 +10,341 @@ import PersonalityFormField from '@/components/ui/personality-form-field'
 import ImageUpload from '@/components/ui/image-upload'
 import { BotPersonality, BotImage, FORM_FIELD_GROUPS } from '@/lib/types/bot-personality'
 import { Language, CATEGORY_LABELS } from '@/lib/bot-personality-lang'
+
+// 向量检索结果类型
+interface VectorSearchResult {
+  bot_id: string
+  bot_name: string
+  vector_type: string
+  content: string
+  similarity: number
+  search_weight: number
+  metadata: Record<string, unknown>
+  personality?: {
+    id: string
+    bot_name: string
+    nationality?: string
+    age?: number
+    gender?: string
+    current_job?: string
+    values?: string
+    hobbies?: string
+  }
+}
+
+interface VectorSearchResponse {
+  results: VectorSearchResult[]
+  total: number
+  query: string
+  similarity_threshold: number
+}
+
+// 向量检索组件
+interface VectorTestComponentProps {
+  currentBotId?: string
+  botName?: string
+}
+
+function VectorTestComponent({ currentBotId, botName }: VectorTestComponentProps) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<VectorSearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [threshold, setThreshold] = useState(0.3)
+  const [thresholdInput, setThresholdInput] = useState('0.3')
+  const [thresholdError, setThresholdError] = useState<string | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+  const [vectorType, setVectorType] = useState<string>('comprehensive')
+
+  const handleSearch = async () => {
+    if (!query.trim()) return
+    
+    // 创建新的AbortController
+    const controller = new AbortController()
+    setAbortController(controller)
+    
+    setLoading(true)
+    setError(null)
+    setResults([])
+    setHasSearched(true)
+    
+    try {
+      const response = await fetch('/api/bot-personality/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          limit: 10,
+          similarity_threshold: threshold,
+          vector_type: vectorType,
+          include_bot_id: currentBotId // 只搜索当前机器人
+        }),
+        signal: controller.signal
+      })
+
+      if (controller.signal.aborted) {
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '搜索失败')
+      }
+
+      const data: VectorSearchResponse = await response.json()
+      
+      if (controller.signal.aborted) {
+        return
+      }
+      
+      setResults(data.results || [])
+      console.log('人设向量检索结果:', data)
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('检索已被用户取消')
+        setError('检索已取消')
+        return
+      }
+      
+      console.error('检索失败:', error)
+      setError(error instanceof Error ? error.message : '检索失败')
+    } finally {
+      setLoading(false)
+      setAbortController(null)
+    }
+  }
+
+  // 取消检索
+  const handleCancelSearch = () => {
+    if (abortController) {
+      abortController.abort()
+      setAbortController(null)
+      setLoading(false)
+      setError('检索已取消')
+    }
+  }
+
+  // 清除错误状态
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value)
+    if (error === '检索已取消') {
+      setError(null)
+    }
+    if (hasSearched) {
+      setHasSearched(false)
+      setResults([])
+    }
+  }
+
+  const handleThresholdChange = (value: string) => {
+    setThresholdInput(value)
+    
+    if (error === '检索已取消') {
+      setError(null)
+    }
+    
+    if (value.trim() === '') {
+      setThresholdError('请输入相似度阈值')
+      return
+    }
+    
+    const num = parseFloat(value)
+    if (isNaN(num)) {
+      setThresholdError('请输入有效的数字')
+      return
+    }
+    
+    if (num < 0 || num > 1) {
+      setThresholdError('相似度阈值必须在 0.0 到 1.0 之间')
+      return
+    }
+    
+    setThresholdError(null)
+    setThreshold(num)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !loading) {
+      handleSearch()
+    }
+  }
+
+  // 向量类型选项
+  const vectorTypeOptions = [
+    { value: 'comprehensive', label: '综合向量' },
+    { value: 'basic_info', label: '基础信息' },
+    { value: 'personality', label: '性格特征' },
+    { value: 'experiences', label: '人生经历' },
+    { value: 'preferences', label: '生活偏好' },
+    { value: 'dreams', label: '未来梦想' }
+  ]
+
+  return (
+    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800/30">
+      <h3 className="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100 flex items-center">
+        <Search className="w-5 h-5 mr-2" />
+        {botName || '机器人'}向量检索测试
+      </h3>
+      
+      <div className="space-y-4 mb-6">
+        <div className="flex space-x-2">
+          <Input
+            value={query}
+            onChange={(e) => handleQueryChange(e)}
+            onKeyPress={handleKeyPress}
+            placeholder="输入检索查询，测试当前机器人的向量匹配效果..."
+            className="flex-1"
+            disabled={loading}
+          />
+          {!loading ? (
+            <Button 
+              onClick={handleSearch}
+              disabled={!query.trim() || !!thresholdError}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              检索
+            </Button>
+          ) : (
+            <div className="flex space-x-2">
+              <Button 
+                disabled
+                className="opacity-50 flex items-center space-x-2 bg-blue-600 text-white"
+              >
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>检索中...</span>
+              </Button>
+              <Button 
+                onClick={handleCancelSearch}
+                variant="secondary"
+                className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30"
+                title="取消检索"
+              >
+                <X className="w-4 h-4 mr-1" />
+                取消
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600 dark:text-gray-400">向量类型:</label>
+            <select
+              value={vectorType}
+              onChange={(e) => setVectorType(e.target.value)}
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              {vectorTypeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600 dark:text-gray-400">相似度阈值:</label>
+            <div className="flex flex-col">
+              <Input
+                type="text"
+                value={thresholdInput}
+                onChange={(e) => handleThresholdChange(e.target.value)}
+                placeholder="0.3"
+                className={`w-20 ${thresholdError ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+              {thresholdError && (
+                <span className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  {thresholdError}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            (0.0-1.0, 越高越严格)
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className={`mb-4 p-3 rounded-lg border ${
+          error === '检索已取消' 
+            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' 
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+        }`}>
+          <p className={`text-sm ${
+            error === '检索已取消'
+              ? 'text-yellow-600 dark:text-yellow-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}>
+            {error === '检索已取消' ? '⚠️ ' : '❌ '}
+            {error === '检索已取消' ? '检索已被取消' : `错误: ${error}`}
+          </p>
+        </div>
+      )}
+
+      {results.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="font-medium text-gray-900 dark:text-gray-100">
+            {botName || '机器人'}向量匹配结果 ({results.length}):
+          </h4>
+          {results.map((result, index) => (
+            <div key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                    {result.vector_type === 'basic_info' ? '基础信息' :
+                     result.vector_type === 'personality' ? '性格特征' :
+                     result.vector_type === 'experiences' ? '人生经历' :
+                     result.vector_type === 'preferences' ? '生活偏好' :
+                     result.vector_type === 'dreams' ? '未来梦想' :
+                     '综合向量'}
+                  </span>
+                  {result.personality && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {result.personality.age && `${result.personality.age}岁`}
+                      {result.personality.gender && ` • ${result.personality.gender}`}
+                      {result.personality.nationality && ` • ${result.personality.nationality}`}
+                      {result.personality.current_job && ` • ${result.personality.current_job}`}
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                  {(result.similarity * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">
+                {result.bot_name}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                {result.content.length > 200 ? `${result.content.substring(0, 200)}...` : result.content}
+              </div>
+              {result.personality?.values && (
+                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                  价值观: {result.personality.values}
+                </div>
+              )}
+              {result.personality?.hobbies && (
+                <div className="mt-1 text-xs text-green-600 dark:text-green-400">
+                  兴趣爱好: {result.personality.hobbies}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : hasSearched && !loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-500 dark:text-gray-400">
+            {botName || '机器人'}的向量与查询&quot;{query}&quot;匹配度较低，尝试降低相似度阈值或使用更相关的查询词
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // 获取分类标签（用于标签页）
 const getCategoryLabel = (key: string, lang: Language = 'zh'): string => {
@@ -63,6 +398,7 @@ export default function BotsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteId, setDeleteId] = useState('')
+  const [showVectorTest, setShowVectorTest] = useState(false)
   
   const [activeTab, setActiveTab] = useState<string>('basic_info')
   const [newBotName, setNewBotName] = useState('')
@@ -134,7 +470,10 @@ export default function BotsPage() {
       const response = await fetch('/api/bot-personality', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bot_name: newBotName.trim() })
+        body: JSON.stringify({ 
+          bot_name: newBotName.trim(),
+          language: language  // 传递当前语言
+        })
       })
 
       if (response.ok) {
@@ -180,6 +519,7 @@ export default function BotsPage() {
       if (!response.ok) {
         throw new Error('删除操作失败')
       }
+
     } catch (error) {
       console.error('Error deleting bot:', error)
       
@@ -227,13 +567,16 @@ export default function BotsPage() {
       const response = await fetch('/api/bot-personality', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...currentBot, id: selectedBotId })
+        body: JSON.stringify({ 
+          ...currentBot, 
+          id: selectedBotId,
+          language: language  // 传递当前语言
+        })
       })
 
       if (response.ok) {
         // 成功后重新加载确保数据一致性
         await loadPersonalities()
-        alert('保存成功！')
       } else {
         // 失败时回滚状态
         setPersonalities(originalPersonalities)
@@ -266,13 +609,15 @@ export default function BotsPage() {
             <h2 className="text-m font-semibold text-gray-900 dark:text-gray-100">
               机器人列表
             </h2>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              size="sm"
-              className="neumorphic bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center space-x-1">
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                size="sm"
+                className="neumorphic bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
         
@@ -300,12 +645,25 @@ export default function BotsPage() {
       <div className="flex-1 flex flex-col min-h-0">
         {selectedBotId ? (
           <>
-            {/* 顶部工具栏 - 添加删除按钮 */}
+            {/* 顶部工具栏 */}
             <div className="bg-white dark:bg-[var(--component-background)] border-b border-gray-200 dark:border-[var(--border-color)] p-6 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div>
+                      {/* 向量检索按钮 */}
+                      <div className="mb-3">
+                        <Button
+                          variant="secondary"
+                          onClick={() => setShowVectorTest(!showVectorTest)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        >
+                          <Search className="w-4 h-4 mr-2" />
+                          {showVectorTest ? '隐藏' : '显示'}向量检索
+                          <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-200 ${showVectorTest ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </div>
+                      
                       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                         {currentBot.bot_name || '未命名机器人'}
                       </h1>
@@ -366,6 +724,13 @@ export default function BotsPage() {
                 </div>
               </div>
             </div>
+
+            {/* 向量检索面板 */}
+            {showVectorTest && (
+              <div className="bg-white dark:bg-[var(--component-background)] border-b border-gray-200 dark:border-[var(--border-color)] px-6 py-4 flex-shrink-0">
+                <VectorTestComponent currentBotId={selectedBotId} botName={currentBot.bot_name} />
+              </div>
+            )}
 
             {/* 标签页导航 */}
             <div className="bg-white dark:bg-[var(--component-background)] border-b border-gray-200 dark:border-[var(--border-color)] flex-shrink-0">
@@ -529,7 +894,7 @@ export default function BotsPage() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteBot}
         title="删除机器人"
-        message="确定要删除这个机器人吗？此操作无法撤销，所有相关数据将被永久删除。"
+        message="确定要删除这个机器人吗？此操作无法撤销。"
         confirmText="删除"
         cancelText="取消"
         type="danger"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Users, MessageSquare, Clock, Zap, RefreshCw, Bot, FileText, Library, Plus, AlertTriangle } from 'lucide-react';
+import { Send, Users, MessageSquare, Clock, Zap, RefreshCw, Bot, FileText, Library, Plus, AlertTriangle, User } from 'lucide-react';
 
 // 类型定义
 interface ChatUser {
@@ -16,6 +16,14 @@ interface Prompt {
 interface TopicLibrary {
   id: string;
   library_name: string;
+}
+interface BotPersonality {
+  id: string;
+  bot_name: string;
+  nationality?: string;
+  age?: number;
+  current_job?: string;
+  hobbies?: string;
 }
 interface ChatSession {
   id: string;
@@ -36,6 +44,7 @@ export default function TestChatPage() {
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [topicLibs, setTopicLibs] = useState<TopicLibrary[]>([]);
+  const [personalities, setPersonalities] = useState<BotPersonality[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   
@@ -43,12 +52,13 @@ export default function TestChatPage() {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedSession, setSelectedSession] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState('');
+  const [selectedPersonality, setSelectedPersonality] = useState('');
   const [selectedTopicLib, setSelectedTopicLib] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState<'zh' | 'vi'>('vi');
   
   // 设置状态
   const [mergeSeconds, setMergeSeconds] = useState(30); // 默认30秒
   const [topicHours, setTopicHours] = useState(24);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.5);
   const [historyLimit, setHistoryLimit] = useState(10);
 
   const [newMessage, setNewMessage] = useState('');
@@ -56,7 +66,7 @@ export default function TestChatPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const isChatDisabled = !selectedUser || !selectedSession || !selectedPrompt || !selectedTopicLib;
+  const isChatDisabled = !selectedUser || !selectedSession || !selectedPrompt || !selectedPersonality || !selectedTopicLib;
 
   // 通用日志记录
   const addLog = useCallback((message: string, isError = false) => {
@@ -92,6 +102,7 @@ export default function TestChatPage() {
     loadData('/api/chat/users', setUsers, '用户');
     loadData('/api/prompts', setPrompts, 'Prompts');
     loadData('/api/topics', setTopicLibs, '话题库');
+    loadData('/api/bot-personality', setPersonalities, '机器人人设');
   }, [loadData]);
 
   // 根据选择加载数据
@@ -205,7 +216,7 @@ export default function TestChatPage() {
     if (!selectedSession) return;
     setIsProcessing(true);
     addLog(`正在请求立即回复...`);
-    addLog(`使用参数: RAG阈值=${similarityThreshold}, 历史记录数=${historyLimit}`);
+    addLog(`使用参数: 历史记录数=${historyLimit}, Prompt=${selectedPrompt}, 人设=${selectedPersonality}, 语言=${selectedLanguage === 'zh' ? '中文' : '越南文'}`);
     try {
       const response = await fetch('/api/chat/message', { 
         method: 'PUT', 
@@ -213,8 +224,10 @@ export default function TestChatPage() {
         body: JSON.stringify({ 
           session_id: selectedSession, 
           force: true,
-          similarity_threshold: similarityThreshold,
-          history_limit: historyLimit
+          history_limit: historyLimit,
+          prompt_id: selectedPrompt,
+          personality_id: selectedPersonality,
+          language: selectedLanguage
         }) 
       });
       const data = await response.json();
@@ -235,6 +248,16 @@ export default function TestChatPage() {
             }
           } else {
             addLog(`❌ 未找到相关知识库内容`);
+          }
+          
+          // 显示人设匹配信息
+          if (metadata.personality_similarity) {
+            addLog(`🎭 人设匹配度: ${metadata.personality_similarity?.toFixed(3)}`);
+          }
+          
+          // 显示缩写识别信息
+          if (metadata.abbreviations_found > 0) {
+            addLog(`🔤 识别到 ${metadata.abbreviations_found} 个缩写`);
           }
         }
         
@@ -312,6 +335,15 @@ export default function TestChatPage() {
               </select>
             </div>
 
+            {/* 人设选择 */}
+            <div className="flex flex-col">
+              <label className="text-sm font-semibold mb-1 flex items-center"><User className="w-4 h-4 mr-1"/>人设</label>
+              <select value={selectedPersonality} onChange={e => setSelectedPersonality(e.target.value)} className={selectClass}>
+                <option value="">选择人设</option>
+                {personalities.map(p => <option key={p.id} value={p.id}>{p.bot_name}</option>)}
+              </select>
+            </div>
+
             {/* 话题库选择 */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold mb-1 flex items-center"><Library className="w-4 h-4 mr-1"/>话题库</label>
@@ -319,12 +351,6 @@ export default function TestChatPage() {
                 <option value="">选择话题库</option>
                 {topicLibs.map(t => <option key={t.id} value={t.id}>{t.library_name}</option>)}
               </select>
-            </div>
-
-            {/* RAG阈值 */}
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold mb-1">RAG检索阈值</label>
-                <input type="number" step="0.1" min="0" max="1" value={similarityThreshold} onChange={e => setSimilarityThreshold(Number(e.target.value))} className={`${selectClass} w-full`}/>
             </div>
 
             {/* 历史记录数 */}
@@ -370,14 +396,41 @@ export default function TestChatPage() {
           
           {/* 右侧：聊天窗口 */}
           <div className={`lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col h-[70vh] transition-opacity duration-300 ${isChatDisabled ? 'opacity-50' : ''}`}>
-            <div className="p-4 border-b dark:border-gray-700">
+            <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
               <h3 className="font-semibold">聊天窗口</h3>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">语言选择:</span>
+                <div className="flex items-center space-x-3">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="language"
+                      value="zh"
+                      checked={selectedLanguage === 'zh'}
+                      onChange={(e) => setSelectedLanguage(e.target.value as 'zh' | 'vi')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">中文对话</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="language"
+                      value="vi"
+                      checked={selectedLanguage === 'vi'}
+                      onChange={(e) => setSelectedLanguage(e.target.value as 'zh' | 'vi')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Hội thoại tiếng Việt（越南文对话）</span>
+                  </label>
+                </div>
+              </div>
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4">
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                     <AlertTriangle className="w-12 h-12 mb-4"/>
-                    <p>请在顶部选择 用户、会话、Prompt 和 话题库 以开始聊天</p>
+                    <p>请在顶部选择 用户、会话、Prompt、人设 和 话题库 以开始聊天</p>
                 </div>
               )}
               {messages.map(msg => (

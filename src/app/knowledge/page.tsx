@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, BookOpen, MessageSquare, Trash2, Edit, ChevronDown } from 'lucide-react'
+import { Plus, BookOpen, MessageSquare, Trash2, Edit, ChevronDown, Search } from 'lucide-react'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Form, Input, Textarea } from '@/components/ui/form'
@@ -1058,11 +1058,14 @@ export default function KnowledgePage() {
 
       {/* 创建按钮区域 */}
       <div className="flex justify-between items-center mb-6">
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           onClick={() => setShowTestPanel(!showTestPanel)}
+          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
         >
-          {showTestPanel ? '隐藏' : '显示'}向量检索测试
+          <Search className="w-4 h-4 mr-2" />
+          {showTestPanel ? '隐藏' : '显示'}向量检索
+          <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-200 ${showTestPanel ? 'rotate-180' : ''}`} />
         </Button>
         <Button onClick={openCreateModal} neumorphic className="flex items-center space-x-2">
           <Plus className="w-4 h-4" />

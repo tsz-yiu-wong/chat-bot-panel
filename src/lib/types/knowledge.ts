@@ -29,5 +29,12 @@ export interface SessionMetadata {
   knowledge_context_length?: number;
   knowledge_results_count?: number;
   knowledge_max_similarity?: number;
+  personality_similarity?: number;
+  abbreviations_found?: number;
   history_limit?: number;
+  prompt_id?: string;
+  personality_id?: string;
+  received_at?: string;
+  language?: 'zh' | 'vi';
+  [key: string]: unknown;
 } 

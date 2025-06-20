@@ -42,9 +42,12 @@ export async function POST(request: NextRequest) {
     // 3. 计算相似度并排序
     const results = []
     let processed = 0
-    let aboveThreshold = 0
     
-    console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}${document_type ? `，文档类型: ${document_type}` : ''}`)
+    // 移除详细的进度日志，只在开发环境下输出
+    const isDev = process.env.NODE_ENV === 'development'
+    if (isDev) {
+      console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}${document_type ? `，文档类型: ${document_type}` : ''}`)
+    }
     
     for (const vector of vectors) {
       try {
@@ -60,23 +63,23 @@ export async function POST(request: NextRequest) {
               embedding = JSON.parse(vector.embedding)
             } catch {
               // 如果解析失败，可能是pgvector原生格式，跳过此向量
-              console.warn(`无法解析向量 ${vector.document_id} 的embedding字段`)
+              // 移除重复的警告日志
               continue
             }
           } else if (Array.isArray(vector.embedding)) {
             embedding = vector.embedding
           } else {
-            console.warn(`向量 ${vector.document_id} 的embedding字段格式不支持`)
+            // 移除格式不支持的警告日志
             continue
           }
         } else {
-          console.warn(`向量 ${vector.document_id} 没有有效的embedding数据`)
+          // 移除没有embedding数据的警告日志
           continue
         }
 
         // 验证向量维度
         if (!Array.isArray(embedding) || embedding.length !== queryEmbedding.length) {
-          console.warn(`向量维度不匹配: 向量 ${vector.document_id}, 维度: ${embedding?.length}, 期望: ${queryEmbedding.length}`)
+          // 移除维度不匹配的警告日志
           continue
         }
 
@@ -84,9 +87,6 @@ export async function POST(request: NextRequest) {
         const similarity = cosineSimilarity(queryEmbedding, embedding)
         
         if (similarity >= similarity_threshold) {
-          aboveThreshold++
-          console.log(`找到匹配项 ${vector.document_id} (${vector.document_type}), 相似度: ${similarity.toFixed(3)}`)
-          
           // 获取对应的文档或话术内容
           let content, title, type, metadata = vector.metadata || {}
           
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
               .single()
               
             if (abbrError) {
-              console.error(`获取缩写数据失败 ${vector.document_id}:`, abbrError)
+              if (isDev) console.error(`获取缩写数据失败 ${vector.document_id}:`, abbrError)
               continue
             }
               
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
               .single()
               
             if (scriptError) {
-              console.error(`获取话术数据失败 ${vector.document_id}:`, scriptError)
+              if (isDev) console.error(`获取话术数据失败 ${vector.document_id}:`, scriptError)
               continue
             }
               
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
               .single()
               
             if (docError) {
-              console.error(`获取文档数据失败 ${vector.document_id}:`, docError)
+              if (isDev) console.error(`获取文档数据失败 ${vector.document_id}:`, docError)
               continue
             }
               
@@ -154,18 +154,18 @@ export async function POST(request: NextRequest) {
               similarity,
               metadata
             })
-            console.log(`成功添加结果: ${title}`)
-          } else {
-            console.warn(`无法获取内容: ${vector.document_id} (${vector.document_type})`)
           }
         }
       } catch (err) {
-        console.error(`处理向量 ${vector.document_id} 时出错:`, err)
+        if (isDev) console.error(`处理向量 ${vector.document_id} 时出错:`, err)
         continue
       }
     }
 
-    console.log(`处理完成: 总计 ${processed} 个向量，${aboveThreshold} 个超过阈值，${results.length} 个有效结果`)
+    // 只在开发环境或有结果时输出统计信息
+    if (isDev || results.length > 0) {
+      console.log(`向量检索完成: 检查了 ${processed} 个向量，找到 ${results.length} 个匹配结果`)
+    }
 
     // 4. 按相似度排序并限制结果数量
     results.sort((a, b) => b.similarity - a.similarity)

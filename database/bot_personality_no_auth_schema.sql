@@ -26,10 +26,18 @@ DROP INDEX IF EXISTS idx_bot_personalities_user_id;
 -- 修改表结构：将user_id改为可选字段
 ALTER TABLE bot_personalities ALTER COLUMN user_id DROP NOT NULL;
 
+-- 添加软删除字段（如果不存在）
+ALTER TABLE bot_personalities ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE bot_images ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+
 -- 重新创建外键约束（只有bot_images到bot_personalities的关联）
 ALTER TABLE bot_images 
 ADD CONSTRAINT bot_images_bot_id_fkey 
 FOREIGN KEY (bot_id) REFERENCES bot_personalities(id) ON DELETE CASCADE;
+
+-- 创建软删除相关的索引
+CREATE INDEX IF NOT EXISTS idx_bot_personalities_deleted ON bot_personalities(is_deleted) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_bot_images_deleted ON bot_images(is_deleted) WHERE is_deleted = FALSE;
 
 -- 保留其他有用的索引
 -- CREATE INDEX idx_bot_personalities_active ON bot_personalities(is_active); -- 已存在

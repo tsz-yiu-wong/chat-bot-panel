@@ -4,6 +4,26 @@ import { llmService } from '@/lib/llm-service';
 import crypto from 'crypto';
 import { KnowledgeSearchResult, KnowledgeSearchResponse, SessionMetadata } from '@/lib/types/knowledge';
 
+// 双语文本配置
+const LANGUAGE_TEXTS = {
+  zh: {
+    personalityContext: (similarity: number) => `\n\n根据人设信息 (相似度: ${similarity.toFixed(3)}):\n`,
+    abbreviationContext: '\n\n识别到的缩写:\n',
+    highSimilarityScript: (similarity: number) => `\n\n这是标准话术场景 (相似度${similarity.toFixed(3)})，必须严格参考以下标准回答：\n"`,
+    highSimilarityEnd: '"\n不要额外添加解释、分析或内容。',
+    knowledgeReference: '\n\n参考相关信息：\n',
+    knowledgeInstruction: '\n\n请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。'
+  },
+  vi: {
+    personalityContext: (similarity: number) => `\n\nDựa trên thông tin nhân vật (độ tương tự: ${similarity.toFixed(3)}):\n`,
+    abbreviationContext: '\n\nCác từ viết tắt được nhận dạng:\n',
+    highSimilarityScript: (similarity: number) => `\n\nĐây là kịch bản chuẩn (độ tương tự ${similarity.toFixed(3)}), phải tham khảo nghiêm ngặt câu trả lời chuẩn sau:\n"`,
+    highSimilarityEnd: '"\nKhông được thêm giải thích, phân tích hoặc nội dung bổ sung.',
+    knowledgeReference: '\n\nTham khảo thông tin liên quan:\n',
+    knowledgeInstruction: '\n\nVui lòng tham khảo thông tin trên để trả lời câu hỏi của người dùng. Nếu có câu hỏi và câu trả lời tương tự, có thể tham khảo phong cách và nội dung của chúng.'
+  }
+};
+
 // 创建Supabase客户端
 function createSupabaseServer() {
   return createServerClient(
@@ -288,21 +308,28 @@ export async function PUT(request: NextRequest) {
     const { 
       session_id, 
       force = false,
-      similarity_threshold = 0.5,
       history_limit = 10,
+      prompt_id,
+      personality_id,
+      language = 'zh' // 新增language参数，默认为中文
     } = await request.json();
 
     if (!session_id) {
       return NextResponse.json({ error: '会话ID不能为空' }, { status: 400 });
     }
 
+    if (!prompt_id || !personality_id) {
+      return NextResponse.json({ error: 'Prompt ID和人设ID不能为空' }, { status: 400 });
+    }
+
+    // 验证语言参数
+    const selectedLanguage = (language === 'vi') ? 'vi' : 'zh';
+    const texts = LANGUAGE_TEXTS[selectedLanguage];
+
     // 获取会话信息
     const { data: session, error: sessionError } = await supabase
       .from('chat_sessions')
-      .select(`
-        *,
-        bot_personalities(*)
-      `)
+      .select(`*`)
       .eq('id', session_id)
       .eq('is_deleted', false)
       .single();
@@ -349,47 +376,107 @@ export async function PUT(request: NextRequest) {
       .map(msg => msg.content)
       .join('\n\n');
 
-    // **新增：向量检索相关知识库内容**
+    // **获取选择的prompt内容**
+    const promptResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prompts/${prompt_id}`);
+    let systemPrompt = '你是一个有用的AI助手。';
+    if (promptResponse.ok) {
+      const promptData = await promptResponse.json();
+      if (promptData.prompt && promptData.prompt.prompt_cn) {
+        systemPrompt = promptData.prompt.prompt_cn;
+      }
+    }
+
+    // **1. 人设向量检索 (阈值 0.2)**
+    let personalityContext = '';
+    try {
+      const personalityResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/bot-personality/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: mergedContent,
+          include_bot_id: personality_id,
+          similarity_threshold: 0.2,
+          limit: 1
+        })
+      });
+
+      if (personalityResponse.ok) {
+        const personalityData = await personalityResponse.json();
+        if (personalityData.results && personalityData.results.length > 0) {
+          const bestMatch = personalityData.results[0];
+          console.log(`人设匹配度: ${bestMatch.similarity.toFixed(3)}`);
+          personalityContext = texts.personalityContext(bestMatch.similarity) + bestMatch.content;
+        }
+      }
+    } catch (error) {
+      console.error('人设检索失败:', error);
+    }
+
+    // **2. 缩写检索和处理 (阈值 0.3)**
+    let abbreviationContext = '';
+    let foundAbbreviations: { content: string; similarity: number }[] = [];
+    try {
+      const abbreviationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: mergedContent,
+          document_type: 'abbreviation',
+          similarity_threshold: 0.3,
+          limit: 10
+        })
+      });
+
+      if (abbreviationResponse.ok) {
+        const abbrData = await abbreviationResponse.json();
+        if (abbrData.results && abbrData.results.length > 0) {
+          // 按缩写分组，每个缩写只取最高相似度的
+          const abbrGroups: { [key: string]: { content: string; similarity: number } } = {};
+          abbrData.results.forEach((result: { content: string; similarity: number }) => {
+            const abbrMatch = result.content.match(/缩写:\s*([^|]+)/);
+            if (abbrMatch) {
+              const abbr = abbrMatch[1].trim();
+              if (!abbrGroups[abbr] || result.similarity > abbrGroups[abbr].similarity) {
+                abbrGroups[abbr] = result;
+              }
+            }
+          });
+
+          foundAbbreviations = Object.values(abbrGroups);
+          if (foundAbbreviations.length > 0) {
+            abbreviationContext = texts.abbreviationContext + foundAbbreviations.map(a => a.content).join('\n');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('缩写检索失败:', error);
+    }
+
+    // **3. 话术库检索 (阈值 0.4, 高于 0.7 强力要求)**
     let knowledgeContext = '';
     let searchResponse: KnowledgeSearchResponse = { results: [] };
     try {
       // 调用向量搜索API获取相关知识
-      searchResponse = await searchKnowledgeBase(mergedContent, similarity_threshold);
+      searchResponse = await searchKnowledgeBase(mergedContent, 0.4);
 
       if (searchResponse.results && searchResponse.results.length > 0) {
         console.log(`向量检索找到 ${searchResponse.results.length} 条相关内容`);
         
-        // 检查是否有高相似度的话术匹配
+        // 检查是否有高相似度的话术匹配 (阈值调整为 0.7)
         const veryHighSimilarityScripts = searchResponse.results.filter(
-          (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= 0.8
-        );
-        const highSimilarityScripts = searchResponse.results.filter(
-          (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= 0.6
+          (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= 0.7
         );
 
         if (veryHighSimilarityScripts.length > 0) {
-          // 非常高相似度：直接使用话术回答
+          // 高相似度：强力要求使用话术回答
           const scriptAnswers = veryHighSimilarityScripts.map((result: KnowledgeSearchResult) => {
             const match = result.content.match(/回答:\s*(.+)$/);
             return match ? match[1] : result.content;
           });
 
-          knowledgeContext = `
-
-这是一个标准话术场景，相似度${veryHighSimilarityScripts[0].similarity.toFixed(3)}。
-必须直接回答："${scriptAnswers[0]}"
-不要添加任何解释、分析或额外内容，只需要输出这个标准回答。`;
-        } else if (highSimilarityScripts.length > 0) {
-          // 高相似度：强烈建议使用话术回答
-          const scriptAnswers = highSimilarityScripts.map((result: KnowledgeSearchResult) => {
-            const match = result.content.match(/回答:\s*(.+)$/);
-            return match ? match[1] : result.content;
-          });
-
-          knowledgeContext = `
-
-根据话术库，对于这类问题的标准回答是："${scriptAnswers[0]}"
-请直接使用这个回答，保持简洁和一致性。`;
+          knowledgeContext = texts.highSimilarityScript(veryHighSimilarityScripts[0].similarity) + 
+                            scriptAnswers[0] + 
+                            texts.highSimilarityEnd;
         } else {
           // 如果没有高相似度匹配，提供参考信息
           const knowledgeItems = searchResponse.results.slice(0, 3).map((result: KnowledgeSearchResult) => {
@@ -406,12 +493,7 @@ export async function PUT(request: NextRequest) {
             return result.content;
           }).join('\n');
 
-          knowledgeContext = `
-
-参考相关信息：
-${knowledgeItems}
-
-请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。`;
+          knowledgeContext = texts.knowledgeReference + knowledgeItems + texts.knowledgeInstruction;
         }
       } else {
         console.log('向量检索未找到相关内容');
@@ -444,33 +526,33 @@ ${knowledgeItems}
       content: mergedContent
     });
 
-    // 构建系统Prompt（包含知识库上下文）
-    let systemPrompt = '你是一个有用的AI助手。';
-    if (session.bot_personalities) {
-      const personality = session.bot_personalities;
-      systemPrompt = `你是${personality.bot_name}，一个AI聊天机器人。
-      
-个人信息：
-- 姓名：${personality.bot_name}
-- 性格：${personality.worldview || '友善、乐于助人'}
-- 兴趣爱好：${personality.hobbies || '聊天、学习新知识'}
-
-请保持角色设定，用友善和有帮助的方式回应用户。${knowledgeContext}`;
-    } else {
-      // 如果没有人设，至少要加上知识库上下文
-      if (knowledgeContext) {
-        systemPrompt += knowledgeContext;
-      }
-    }
+    // **构建最终的系统Prompt**
+    const finalSystemPrompt = systemPrompt + personalityContext + abbreviationContext + knowledgeContext;
 
     // 调用LLM生成回复
     const llmResponse = await llmService.chatWithHistory([
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: finalSystemPrompt },
       ...historyMessages
     ]);
 
     if (!llmResponse.success) {
       throw new Error(`LLM调用失败: ${llmResponse.error}`);
+    }
+
+    // **缩写替换处理** - 对AI回复进行缩写替换
+    let finalContent = llmResponse.content;
+    if (foundAbbreviations.length > 0) {
+      foundAbbreviations.forEach(abbr => {
+        const fullFormMatch = abbr.content.match(/完整形式:\s*([^|]+)/);
+        const abbrMatch = abbr.content.match(/缩写:\s*([^|]+)/);
+        if (fullFormMatch && abbrMatch) {
+          const fullForm = fullFormMatch[1].trim();
+          const abbreviation = abbrMatch[1].trim();
+          // 简单的替换逻辑，可以根据需要优化
+          const regex = new RegExp(`\\b${fullForm}\\b`, 'gi');
+          finalContent = finalContent.replace(regex, abbreviation);
+        }
+      });
     }
 
     // 生成合并组ID
@@ -483,7 +565,7 @@ ${knowledgeItems}
         session_id,
         user_id: null,
         role: 'assistant',
-        content: llmResponse.content,
+        content: finalContent,
         is_processed: true,
         merge_group_id: mergeGroupId,
         metadata: {
@@ -491,12 +573,18 @@ ${knowledgeItems}
           llm_usage: llmResponse.usage,
           merged_messages_count: pendingMessages.length,
           processed_at: new Date().toISOString(),
-          knowledge_search_threshold: similarity_threshold,
+          knowledge_search_threshold: 0.4,
           knowledge_context_length: knowledgeContext.length,
           knowledge_results_count: searchResponse?.results?.length || 0,
           knowledge_max_similarity: searchResponse?.results?.length > 0 ? 
             Math.max(...searchResponse.results.map((r: KnowledgeSearchResult) => r.similarity)) : 0,
-          history_limit: history_limit
+          personality_similarity: personalityContext ? 
+            (personalityContext.match(/相似度:\s*([\d.]+)/) ? parseFloat(personalityContext.match(/相似度:\s*([\d.]+)/)![1]) : 0) : 0,
+          abbreviations_found: foundAbbreviations.length,
+          history_limit: history_limit,
+          prompt_id: prompt_id,
+          personality_id: personality_id,
+          language: selectedLanguage
         } as SessionMetadata
       })
       .select()
