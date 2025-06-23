@@ -52,7 +52,7 @@ export class LLMService {
   }
 
   // 基于消息历史的对话
-  async chatWithHistory(messages: Array<{role: 'user' | 'assistant' | 'system', content: string}>, options: {
+  async chatWithHistory(messages: Array<{role: string, content: string}>, options: {
     maxTokens?: number;
     temperature?: number;
     model?: string;
@@ -64,12 +64,17 @@ export class LLMService {
         model = 'gpt-3.5-turbo'
       } = options;
 
+      // 过滤掉OpenAI不支持的角色类型，只保留 'user', 'assistant', 'system'
+      const validMessages = messages.filter(msg => 
+        ['user', 'assistant', 'system'].includes(msg.role)
+      ).map(msg => ({
+        role: msg.role as 'user' | 'assistant' | 'system',
+        content: msg.content
+      }));
+
       const response = await this.openai.chat.completions.create({
         model,
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
+        messages: validMessages,
         max_tokens: maxTokens,
         temperature,
       });

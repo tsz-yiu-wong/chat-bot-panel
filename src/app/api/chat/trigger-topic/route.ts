@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       .insert({
         session_id,
         role: 'topic',
-        content: `【话题】 ${randomTopic.content}`,
+        content: randomTopic.content,
         is_processed: true, // 标记为已处理，不进入LLM流程
       })
       .select()

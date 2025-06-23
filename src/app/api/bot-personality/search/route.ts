@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import OpenAI from 'openai';
+import { getKnowledgeRetrievalConfig } from '@/lib/config/ai-config';
 
 // 创建Supabase客户端
 function createSupabaseServer() {
@@ -77,15 +78,16 @@ function cosineSimilarity(a: number[], b: number[]): number {
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
-    const requestBody = await request.json();
+    const config = getKnowledgeRetrievalConfig();
+    
     const { 
       query, 
-      limit = 5, 
-      similarity_threshold = 0.7, 
+      limit = config.personality_matching.limit, 
+      similarity_threshold = config.personality_matching.similarity_threshold,  // 使用配置
       vector_type = null,
       exclude_bot_id = null,
       include_bot_id = null 
-    } = requestBody;
+    } = await request.json();
     
     if (!query) {
       return NextResponse.json({ error: '缺少搜索查询' }, { status: 400 });

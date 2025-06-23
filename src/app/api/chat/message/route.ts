@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { llmService } from '@/lib/llm-service';
 import crypto from 'crypto';
 import { KnowledgeSearchResult, KnowledgeSearchResponse, SessionMetadata } from '@/lib/types/knowledge';
+import { getKnowledgeRetrievalConfig, getChatProcessingConfig } from '@/lib/config/ai-config';
 
 // 双语文本配置
 const LANGUAGE_TEXTS = {
@@ -49,8 +50,12 @@ function createSupabaseServer() {
 }
 
 // 内部向量搜索函数
-async function searchKnowledgeBase(query: string, similarity_threshold: number = 0.5, limit: number = 5) {
+async function searchKnowledgeBase(query: string, similarity_threshold?: number, limit?: number) {
   try {
+    const config = getKnowledgeRetrievalConfig();
+    const actualThreshold = similarity_threshold ?? config.general_knowledge.similarity_threshold;
+    const actualLimit = limit ?? config.general_knowledge.limit;
+    
     const supabase = createSupabaseServer();
     
     // 生成查询向量
@@ -104,7 +109,7 @@ async function searchKnowledgeBase(query: string, similarity_threshold: number =
         // 计算余弦相似度
         const similarity = cosineSimilarity(queryEmbedding, embedding);
         
-        if (similarity >= similarity_threshold) {
+        if (similarity >= actualThreshold) {
           // 获取对应的文档内容
           let content, title, type: 'script' | 'abbreviation' | 'knowledge' | undefined;
           
@@ -152,7 +157,7 @@ async function searchKnowledgeBase(query: string, similarity_threshold: number =
 
     // 按相似度排序并限制结果数量
     results.sort((a, b) => b.similarity - a.similarity);
-    return { results: results.slice(0, limit) };
+    return { results: results.slice(0, actualLimit) };
     
   } catch (error) {
     console.error('知识库搜索失败:', error);
@@ -305,10 +310,13 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const supabase = createSupabaseServer();
+    const knowledgeConfig = getKnowledgeRetrievalConfig();
+    const chatConfig = getChatProcessingConfig();
+    
     const { 
       session_id, 
       force = false,
-      history_limit = 10,
+      history_limit = chatConfig.history_limit,  // 使用配置文件的默认值
       prompt_id,
       personality_id,
       language = 'zh' // 新增language参数，默认为中文
@@ -386,7 +394,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // **1. 人设向量检索 (阈值 0.2)**
+    // **1. 人设向量检索**
     let personalityContext = '';
     try {
       const personalityResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/bot-personality/search`, {
@@ -395,8 +403,8 @@ export async function PUT(request: NextRequest) {
         body: JSON.stringify({
           query: mergedContent,
           include_bot_id: personality_id,
-          similarity_threshold: 0.2,
-          limit: 1
+          similarity_threshold: knowledgeConfig.personality_matching.similarity_threshold,  // 使用配置
+          limit: knowledgeConfig.personality_matching.limit  // 使用配置
         })
       });
 
@@ -412,7 +420,7 @@ export async function PUT(request: NextRequest) {
       console.error('人设检索失败:', error);
     }
 
-    // **2. 缩写检索和处理 (阈值 0.3)**
+    // **2. 缩写检索和处理**
     let abbreviationContext = '';
     let foundAbbreviations: { content: string; similarity: number }[] = [];
     try {
@@ -422,8 +430,8 @@ export async function PUT(request: NextRequest) {
         body: JSON.stringify({
           query: mergedContent,
           document_type: 'abbreviation',
-          similarity_threshold: 0.3,
-          limit: 10
+          similarity_threshold: knowledgeConfig.abbreviation_recognition.similarity_threshold,  // 使用配置
+          limit: knowledgeConfig.abbreviation_recognition.limit  // 使用配置
         })
       });
 
@@ -452,19 +460,22 @@ export async function PUT(request: NextRequest) {
       console.error('缩写检索失败:', error);
     }
 
-    // **3. 话术库检索 (阈值 0.4, 高于 0.7 强力要求)**
+    // **3. 话术库检索**
     let knowledgeContext = '';
     let searchResponse: KnowledgeSearchResponse = { results: [] };
     try {
       // 调用向量搜索API获取相关知识
-      searchResponse = await searchKnowledgeBase(mergedContent, 0.4);
+      searchResponse = await searchKnowledgeBase(
+        mergedContent, 
+        knowledgeConfig.script_library.similarity_threshold  // 使用配置
+      );
 
       if (searchResponse.results && searchResponse.results.length > 0) {
         console.log(`向量检索找到 ${searchResponse.results.length} 条相关内容`);
         
-        // 检查是否有高相似度的话术匹配 (阈值调整为 0.7)
+        // 检查是否有高相似度的话术匹配
         const veryHighSimilarityScripts = searchResponse.results.filter(
-          (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= 0.7
+          (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= knowledgeConfig.script_library.force_use_threshold  // 使用配置
         );
 
         if (veryHighSimilarityScripts.length > 0) {
@@ -573,7 +584,7 @@ export async function PUT(request: NextRequest) {
           llm_usage: llmResponse.usage,
           merged_messages_count: pendingMessages.length,
           processed_at: new Date().toISOString(),
-          knowledge_search_threshold: 0.4,
+          knowledge_search_threshold: knowledgeConfig.script_library.similarity_threshold,
           knowledge_context_length: knowledgeContext.length,
           knowledge_results_count: searchResponse?.results?.length || 0,
           knowledge_max_similarity: searchResponse?.results?.length > 0 ? 
@@ -622,6 +633,74 @@ export async function PUT(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('id', session_id);
+
+    // **自动触发聊天向量化（不阻塞响应）**
+    setImmediate(async () => {
+      try {
+        console.log(`开始自动向量化 session: ${session_id}, AI消息: ${aiMessage.id}`);
+        
+        // 等待一小段时间确保数据库触发器已执行
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 检查是否创建了向量记录
+        const { data: vectorCheck, error: checkError } = await supabase
+          .from('chat_message_vectors')
+          .select('id, vector_type')
+          .eq('message_id', aiMessage.id);
+          
+        if (checkError) {
+          console.error('检查向量记录失败:', checkError);
+          return;
+        }
+        
+        if (!vectorCheck || vectorCheck.length === 0) {
+          console.warn(`AI消息 ${aiMessage.id} 没有创建向量记录，可能数据库触发器未工作`);
+          
+          // 手动调用批量向量化作为备用方案
+          const batchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/vectors/batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: session_id,
+              limit: 1
+            })
+          });
+          
+          if (batchResponse.ok) {
+            const batchResult = await batchResponse.json();
+            console.log('备用批量向量化完成:', batchResult.message);
+          } else {
+            console.error('备用批量向量化失败:', await batchResponse.text());
+          }
+          return;
+        }
+        
+        console.log(`找到 ${vectorCheck.length} 个向量记录:`, vectorCheck.map(v => v.vector_type));
+        
+        // 为新创建的向量生成embedding
+        const vectorizeResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/vectors`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: session_id,
+            batch_size: 5  // 限制批量大小，确保及时处理
+          })
+        });
+
+        if (vectorizeResponse.ok) {
+          const result = await vectorizeResponse.json();
+          console.log('自动向量化成功:', result.message);
+          if (result.updated_count > 0) {
+            console.log(`为 ${result.updated_count} 个向量生成了embedding`);
+          }
+        } else {
+          const errorText = await vectorizeResponse.text();
+          console.error('自动向量化失败:', errorText);
+        }
+      } catch (vectorizeError) {
+        console.error('自动向量化调用失败:', vectorizeError);
+      }
+    });
 
     return NextResponse.json({
       success: true,

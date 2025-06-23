@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Users, MessageSquare, Clock, Zap, RefreshCw, Bot, FileText, Library, Plus, AlertTriangle, User } from 'lucide-react';
+import { Send, Users, MessageSquare, Zap, RefreshCw, Bot, FileText, Library, Plus, AlertTriangle, User } from 'lucide-react';
 
 // 类型定义
 interface ChatUser {
@@ -39,6 +39,20 @@ interface ChatMessage {
   is_processed: boolean;
 }
 
+// 向量搜索结果类型
+interface VectorSearchResult {
+  vector_id: string;
+  message_id: string;
+  session_id: string;
+  content: string;
+  vector_type: string;
+  similarity: number;
+  created_at: string;
+  session_name: string;
+  user_name: string;
+  message_role: string;
+}
+
 export default function TestChatPage() {
   // 数据状态
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -59,12 +73,25 @@ export default function TestChatPage() {
   // 设置状态
   const [mergeSeconds, setMergeSeconds] = useState(30); // 默认30秒
   const [topicHours, setTopicHours] = useState(24);
-  const [historyLimit, setHistoryLimit] = useState(10);
+  const historyLimit = 10; // 使用常量值
+
+  // 向量管理状态
+  const [vectorSearchQuery, setVectorSearchQuery] = useState('');
+  const [vectorSearchResults, setVectorSearchResults] = useState<VectorSearchResult[]>([]);
+  const [isVectorizing, setIsVectorizing] = useState(false);
+
+  // 前端测试界面专用的向量搜索配置
+  const [testVectorConfig, setTestVectorConfig] = useState({
+    similarity_threshold: 0.6,  // 前端测试页面独立的阈值
+    limit: 5,                   // 前端测试页面独立的限制
+    include_context: false      // 是否包含上下文向量
+  });
 
   const [newMessage, setNewMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
   
   const isChatDisabled = !selectedUser || !selectedSession || !selectedPrompt || !selectedPersonality || !selectedTopicLib;
 
@@ -72,7 +99,7 @@ export default function TestChatPage() {
   const addLog = useCallback((message: string, isError = false) => {
     const timestamp = new Date().toLocaleTimeString();
     const prefix = isError ? '[错误]' : '[信息]';
-    setLogs(prev => [`${prefix} [${timestamp}] ${message}`, ...prev].slice(0, 100));
+    setLogs(prev => [...prev.slice(-99), `${prefix} [${timestamp}] ${message}`]);
   }, []);
 
   // 通用数据加载
@@ -137,6 +164,23 @@ export default function TestChatPage() {
     }
   }, [selectedUser, loadSessions]);
 
+  // 向量管理函数
+  const loadVectorStats = useCallback(async () => {
+    if (!selectedSession) {
+      setVectorSearchResults([]);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/chat/vectors?session_id=${selectedSession}`);
+      const data = await response.json();
+      if (data.stats) {
+        addLog(`向量统计: ${data.stats.total_vectors} 总计, ${data.stats.with_embedding} 已向量化`);
+      }
+    } catch (error) {
+      addLog(`获取向量统计失败: ${error}`, true);
+    }
+  }, [selectedSession, addLog]);
+
   useEffect(() => {
     if (selectedSession) {
       loadMessages(selectedSession);
@@ -145,10 +189,19 @@ export default function TestChatPage() {
         setMergeSeconds(currentSession.message_merge_seconds);
         setTopicHours(currentSession.topic_trigger_hours);
       }
+      // 加载向量统计
+      loadVectorStats();
     } else {
       setMessages([]);
+      setVectorSearchResults([]);
     }
-  }, [selectedSession, sessions, loadMessages]);
+  }, [selectedSession, sessions, loadMessages, loadVectorStats]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+        logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -156,49 +209,30 @@ export default function TestChatPage() {
 
   // API操作
   const handleCreateUser = async () => {
-    const username = prompt('输入新用户名:');
-    if (!username) return;
     try {
-      const response = await fetch('/api/chat/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, display_name: username }) });
+      addLog('正在创建用户...');
+      const response = await fetch('/api/chat/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "test_user", display_name: "测试用户" }) });
       const data = await response.json();
       if (data.user) {
-        addLog(`创建用户成功: ${data.user.username}`);
+        addLog(`用户创建成功: ${data.user.display_name}`);
         loadData('/api/chat/users', setUsers, '用户');
       } else throw new Error(data.error);
     } catch (error) { addLog(`创建用户失败: ${error}`, true); }
   };
 
   const handleCreateSession = async () => {
-    if (!selectedUser) { alert('请先选择用户'); return; }
-    const sessionName = prompt('输入会话名称:') || '新对话';
+    if (!selectedUser) return;
     try {
       addLog('正在创建会话...');
-      const response = await fetch('/api/chat/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: selectedUser, session_name: sessionName }) });
+      const response = await fetch('/api/chat/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: selectedUser, session_name: "测试会话", message_merge_seconds: mergeSeconds, topic_trigger_hours: topicHours }) });
       const data = await response.json();
       if (data.session) {
-        addLog(`创建会话成功: ${data.session.session_name}`);
-        await loadSessions(selectedUser);
-        setSelectedSession(data.session.id);
+        addLog(`会话创建成功: ${data.session.session_name}`);
+        loadSessions(selectedUser);
       } else throw new Error(data.error);
     } catch (error) { addLog(`创建会话失败: ${error}`, true); }
   };
 
-  const handleUpdateSessionSettings = async (type: 'merge' | 'topic') => {
-    if (!selectedSession) return;
-    const body = type === 'merge' 
-        ? { message_merge_seconds: mergeSeconds } 
-        : { topic_trigger_hours: topicHours };
-    try {
-        addLog(`正在更新会话设置...`);
-        const response = await fetch(`/api/chat/sessions/${selectedSession}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        const data = await response.json();
-        if (data.session) {
-            addLog(`更新成功: ${type === 'merge' ? `延迟回复时间设置为 ${mergeSeconds}s` : `话题等待时间设置为 ${topicHours}h`}`);
-            setSessions(sessions.map(s => s.id === selectedSession ? { ...s, ...body } : s));
-        } else throw new Error(data.error);
-    } catch (error) { addLog(`更新会话设置失败: ${error}`, true); }
-  }
-  
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isChatDisabled) return;
     try {
@@ -267,6 +301,10 @@ export default function TestChatPage() {
           addLog(`ℹ️ 未找到相关知识库内容，使用一般知识回复`);
         }
         addLog(`处理了 ${data.processedCount} 条消息`);
+        
+        // 添加自动向量化提示
+        addLog(`🔄 自动向量化已触发`);
+        
         loadMessages(selectedSession);
       } else {
         addLog(`处理失败: ${data.message || data.error}`, true);
@@ -290,6 +328,61 @@ export default function TestChatPage() {
     finally { setIsProcessing(false); }
   }
 
+  const handleBatchVectorize = async () => {
+    if (!selectedSession) return;
+    setIsVectorizing(true);
+    addLog('开始批量向量化...');
+    try {
+      const response = await fetch('/api/chat/vectors/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: selectedSession, limit: 50 })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addLog(`向量化完成: ${data.message}`);
+        loadVectorStats(); // 重新加载统计
+      } else throw new Error(data.error);
+    } catch (error) {
+      addLog(`批量向量化失败: ${error}`, true);
+    } finally {
+      setIsVectorizing(false);
+    }
+  };
+
+  const handleVectorSearch = async () => {
+    if (!vectorSearchQuery.trim() || !selectedSession) return;
+    addLog(`搜索相似聊天: "${vectorSearchQuery}" (阈值: ${testVectorConfig.similarity_threshold}, 限制: ${testVectorConfig.limit})`);
+    try {
+      const response = await fetch('/api/chat/vectors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: vectorSearchQuery,
+          session_id: selectedSession,
+          limit: testVectorConfig.limit,                          // 使用测试页面的配置
+          similarity_threshold: testVectorConfig.similarity_threshold,  // 使用测试页面的配置
+          include_context: testVectorConfig.include_context       // 使用测试页面的配置
+        })
+      });
+      const data = await response.json();
+      if (data.results) {
+        setVectorSearchResults(data.results);
+        addLog(`找到 ${data.results.length} 条相似聊天记录`);
+        
+        // 在日志中显示每条结果的详细信息
+        data.results.forEach((result: VectorSearchResult) => {
+          const similarity = (result.similarity * 100).toFixed(1);
+          const content = result.content.substring(0, 80); // 显示更多字符
+          addLog(`  ${similarity}% ${content}${result.content.length > 80 ? '...' : ''}`);
+        });
+      } else throw new Error(data.error);
+    } catch (error) {
+      addLog(`向量搜索失败: ${error}`, true);
+      setVectorSearchResults([]);
+    }
+  };
+
   const buttonClass = "p-2 text-white rounded-md transition-colors";
   const coloredButtonClass = `${buttonClass} disabled:opacity-50 disabled:cursor-not-allowed`;
   const selectClass = "w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -301,7 +394,7 @@ export default function TestChatPage() {
 
         {/* 设置栏 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 items-end">
             {/* 用户选择 */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold mb-1 flex items-center"><Users className="w-4 h-4 mr-1"/>用户</label>
@@ -353,10 +446,18 @@ export default function TestChatPage() {
               </select>
             </div>
 
-            {/* 历史记录数 */}
-            <div className="flex flex-col">
-                <label className="text-sm font-semibold mb-1">历史记录数</label>
-                <input type="number" step="1" min="0" value={historyLimit} onChange={e => setHistoryLimit(Number(e.target.value))} className={`${selectClass} w-full`}/>
+            {/* 操作按钮 */}
+            <div className="flex flex-col justify-end lg:col-span-2">
+                {/* 添加空的label以匹配其他选项的高度结构 */}
+                <div className="text-sm font-semibold mb-1 opacity-0">操作</div>
+                <div className="flex gap-2">
+                    <button onClick={handleSendTopic} disabled={!selectedSession || !selectedTopicLib || isProcessing} className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 flex-grow flex items-center justify-center`}>
+                        <Zap className="w-4 h-4 mr-1"/>{isProcessing ? "发送中..." : "发起话题"}
+                    </button>
+                    <button onClick={handleProcessMessages} disabled={!selectedSession || isProcessing} className={`${coloredButtonClass} bg-orange-500 hover:bg-orange-600 flex-grow flex items-center justify-center`}>
+                        <RefreshCw className="w-4 h-4 mr-1"/>{isProcessing ? "处理中..." : "生成回复"}
+                    </button>
+                </div>
             </div>
           </div>
         </div>
@@ -364,31 +465,101 @@ export default function TestChatPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* 左侧：操作 */}
           <div className="flex flex-col gap-4">
+            
+            {/* 向量管理面板 */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md">
-              <h3 className="font-semibold mb-2 flex items-center"><Clock className="w-4 h-4 mr-1"/>延迟回复等待时间</h3>
-              <div className="flex items-center gap-2">
-                <input type="number" value={mergeSeconds} onChange={e => setMergeSeconds(Number(e.target.value))} disabled={!selectedSession} className="w-20 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"/>
-                <span className="text-sm">秒</span>
-                <button onClick={() => handleUpdateSessionSettings('merge')} disabled={!selectedSession} className={`${coloredButtonClass} bg-gray-500 hover:bg-gray-600 px-3`}>保存</button>
-                <button onClick={handleProcessMessages} disabled={!selectedSession || isProcessing} className={`${coloredButtonClass} bg-orange-500 hover:bg-orange-600 flex-grow flex items-center justify-center`}>
-                  <RefreshCw className="w-4 h-4 mr-1"/>{isProcessing ? "处理中..." : "立即回复"}
-                </button>
+              <h3 className="font-semibold mb-2 flex items-center">
+                <Zap className="w-4 h-4 mr-1"/>聊天记录向量管理
+              </h3>
+              
+              <div className="space-y-3">
+                {/* 向量化操作 */}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleBatchVectorize} 
+                    disabled={!selectedSession || isVectorizing}
+                    className={`${coloredButtonClass} bg-purple-500 hover:bg-purple-600 flex-1 text-sm`}
+                  >
+                    {isVectorizing ? "向量化中..." : "批量向量化"}
+                  </button>
+                </div>
+                
+                {/* 向量搜索参数配置 */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="block mb-1 font-medium">相似度阈值</label>
+                    <input 
+                      type="number" 
+                      step="0.1" 
+                      min="0" 
+                      max="1"
+                      value={testVectorConfig.similarity_threshold}
+                      onChange={e => setTestVectorConfig(prev => ({ ...prev, similarity_threshold: Number(e.target.value) }))}
+                      className="w-full p-1 border rounded text-xs dark:bg-gray-700 dark:border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 font-medium">结果数量</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="20"
+                      value={testVectorConfig.limit}
+                      onChange={e => setTestVectorConfig(prev => ({ ...prev, limit: Number(e.target.value) }))}
+                      className="w-full p-1 border rounded text-xs dark:bg-gray-700 dark:border-gray-600"
+                    />
+                  </div>
+                </div>
+
+                {/* 向量搜索 */}
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={vectorSearchQuery}
+                    onChange={e => setVectorSearchQuery(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && handleVectorSearch()}
+                    placeholder="搜索相似聊天..."
+                    disabled={!selectedSession}
+                    className="flex-1 p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                  />
+                  <button 
+                    onClick={handleVectorSearch}
+                    disabled={!selectedSession || !vectorSearchQuery.trim()}
+                    className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 text-sm px-4`}
+                  >
+                    搜索
+                  </button>
+                </div>
+
+                {/* 向量搜索结果显示 */}
+                {vectorSearchResults.length > 0 && (
+                  <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
+                    <div className="font-medium mb-2">搜索结果 ({vectorSearchResults.length} 条):</div>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {vectorSearchResults.slice(0, 3).map((result) => (
+                        <div key={result.vector_id} className="p-1 bg-white dark:bg-gray-600 rounded">
+                          <div className="font-medium text-blue-600 dark:text-blue-400">
+                            相似度: {(result.similarity * 100).toFixed(1)}%
+                          </div>
+                          <div className="text-gray-600 dark:text-gray-300 truncate">
+                            {result.content.substring(0, 60)}...
+                          </div>
+                        </div>
+                      ))}
+                      {vectorSearchResults.length > 3 && (
+                        <div className="text-gray-500 text-center">
+                          ...还有 {vectorSearchResults.length - 3} 条结果
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md">
-              <h3 className="font-semibold mb-2 flex items-center"><Zap className="w-4 h-4 mr-1"/>主动发送话题等待时间</h3>
-              <div className="flex items-center gap-2">
-                <input type="number" value={topicHours} onChange={e => setTopicHours(Number(e.target.value))} disabled={!selectedSession} className="w-20 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"/>
-                <span className="text-sm">小时</span>
-                <button onClick={() => handleUpdateSessionSettings('topic')} disabled={!selectedSession} className={`${coloredButtonClass} bg-gray-500 hover:bg-gray-600 px-3`}>保存</button>
-                <button onClick={handleSendTopic} disabled={!selectedSession || !selectedTopicLib || isProcessing} className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 flex-grow flex items-center justify-center`}>
-                  <Zap className="w-4 h-4 mr-1"/>{isProcessing ? "发送中..." : "立即发送话题"}
-                </button>
-              </div>
-            </div>
+
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md flex-grow">
               <h3 className="font-semibold mb-2">操作日志</h3>
-              <div className="h-56 overflow-y-auto text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded">
+              <div ref={logContainerRef} className="h-60 overflow-y-auto text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded min-h-0">
                 {logs.map((log, i) => <p key={i} className={log.startsWith('[错误]') ? 'text-red-500' : ''}>{log}</p>)}
               </div>
             </div>
@@ -435,23 +606,18 @@ export default function TestChatPage() {
               )}
               {messages.map(msg => (
                 <div key={msg.id}>
-                  {msg.role === 'topic' ? (
-                     <div className="text-center my-2">
-                        <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-full">{msg.content}</span>
-                     </div>
-                  ) : (
-                    <div className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {msg.role === 'assistant' && <Bot className="w-6 h-6 text-blue-500"/>}
-                      <div className={`max-w-xl px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        <div className="text-xs opacity-70 mt-1 text-right">
-                          {new Date(msg.created_at).toLocaleTimeString()}
-                          {!msg.is_processed && msg.role === 'user' && ' ⏳'}
-                        </div>
+                  <div className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {(msg.role === 'assistant' || msg.role === 'topic') && <Bot className="w-6 h-6 text-blue-500"/>}
+                    <div className={`max-w-xl px-4 py-2 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      <div className="text-xs opacity-70 mt-1 text-right">
+                        {new Date(msg.created_at).toLocaleTimeString()}
+                        {!msg.is_processed && msg.role === 'user' && ' ⏳'}
+                        {msg.role === 'topic' && ' 🎯'}
                       </div>
-                      {msg.role === 'user' && <Users className="w-6 h-6 text-green-500"/>}
                     </div>
-                  )}
+                    {msg.role === 'user' && <Users className="w-6 h-6 text-green-500"/>}
+                  </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />

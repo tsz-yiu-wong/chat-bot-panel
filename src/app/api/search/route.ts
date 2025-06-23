@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import OpenAI from 'openai'
+import { getKnowledgeRetrievalConfig } from '@/lib/config/ai-config'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -9,7 +10,8 @@ const openai = new OpenAI({
 // 搜索相似文档
 export async function POST(request: NextRequest) {
   try {
-    const { query, limit = 5, similarity_threshold = 0.1, document_type } = await request.json()
+    const config = getKnowledgeRetrievalConfig()
+    const { query, limit = config.general_knowledge.limit, similarity_threshold = config.general_knowledge.similarity_threshold, document_type } = await request.json()
     
     if (!query) {
       return NextResponse.json(
