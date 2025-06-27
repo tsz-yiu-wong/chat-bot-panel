@@ -211,7 +211,19 @@ export default function TestChatPage() {
   const handleCreateUser = async () => {
     try {
       addLog('正在创建用户...');
-      const response = await fetch('/api/chat/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "test_user", display_name: "测试用户" }) });
+      // 生成唯一的用户名，使用时间戳确保唯一性
+      const timestamp = Date.now();
+      const uniqueUsername = `test_user_${timestamp}`;
+      const uniqueDisplayName = `测试用户${users.length + 1}`;
+      
+      const response = await fetch('/api/chat/users', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          username: uniqueUsername, 
+          display_name: uniqueDisplayName 
+        }) 
+      });
       const data = await response.json();
       if (data.user) {
         addLog(`用户创建成功: ${data.user.display_name}`);
@@ -224,7 +236,20 @@ export default function TestChatPage() {
     if (!selectedUser) return;
     try {
       addLog('正在创建会话...');
-      const response = await fetch('/api/chat/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: selectedUser, session_name: "测试会话", message_merge_seconds: mergeSeconds, topic_trigger_hours: topicHours }) });
+      // 生成唯一的会话名，使用时间戳确保唯一性
+      const timestamp = Date.now();
+      const uniqueSessionName = `测试会话${sessions.length + 1}_${timestamp}`;
+      
+      const response = await fetch('/api/chat/sessions', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          user_id: selectedUser, 
+          session_name: uniqueSessionName, 
+          message_merge_seconds: mergeSeconds, 
+          topic_trigger_hours: topicHours 
+        }) 
+      });
       const data = await response.json();
       if (data.session) {
         addLog(`会话创建成功: ${data.session.session_name}`);
