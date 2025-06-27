@@ -107,6 +107,7 @@ export default function TestChatPage() {
 
   const [newMessage, setNewMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSending, setIsSending] = useState(false); // 新增发送状态
   const [logs, setLogs] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -338,16 +339,39 @@ export default function TestChatPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || isChatDisabled) return;
+    if (!newMessage.trim() || isChatDisabled || isSending) return;
+    
+    const messageContent = newMessage.trim();
+    
+    // 立即清空输入框并进入发送状态
+    setNewMessage('');
+    setIsSending(true);
+    
     try {
-      const response = await fetch('/api/chat/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: selectedSession, content: newMessage, user_id: selectedUser }) });
+      const response = await fetch('/api/chat/message', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          session_id: selectedSession, 
+          content: messageContent, 
+          user_id: selectedUser 
+        }) 
+      });
       const data = await response.json();
       if (data.message) {
-        addLog(`发送消息: "${newMessage.substring(0, 20)}..."`);
-        setNewMessage('');
-        loadMessages(selectedSession); // 重新加载以显示待处理消息
-      } else throw new Error(data.error);
-    } catch (error) { addLog(`发送消息失败: ${error}`, true); }
+        addLog(`发送消息: "${messageContent.substring(0, 20)}..."`);
+        // 发送成功后重新加载消息以显示在聊天区域
+        loadMessages(selectedSession);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) { 
+      addLog(`发送消息失败: ${error}`, true);
+      // 发送失败时恢复输入框内容
+      setNewMessage(messageContent);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleProcessMessages = async () => {
@@ -501,13 +525,13 @@ export default function TestChatPage() {
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`${selectClass} ${className} text-left flex items-center justify-between`}
+          className={`${selectClass} ${className} text-left flex items-center justify-between w-full min-w-0`}
         >
-          <span className={selectedName ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}>
+          <span className={`truncate ${selectedName ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
             {selectedName || placeholder}
           </span>
           <svg 
-            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`}
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -591,15 +615,17 @@ export default function TestChatPage() {
                 <Users className="w-4 h-4 mr-1"/>用户
               </label>
               <div className="flex">
-                <CustomSelectWithOptionDelete
-                  value={selectedUser}
-                  onChange={setSelectedUser}
-                  options={users}
-                  placeholder="选择用户"
-                  onDelete={handleDeleteUser}
-                  deleteTitle="删除用户"
-                  className="rounded-r-none"
-                />
+                <div className="flex-1 min-w-0">
+                  <CustomSelectWithOptionDelete
+                    value={selectedUser}
+                    onChange={setSelectedUser}
+                    options={users}
+                    placeholder="选择用户"
+                    onDelete={handleDeleteUser}
+                    deleteTitle="删除用户"
+                    className="rounded-r-none"
+                  />
+                </div>
                 <button 
                   onClick={handleCreateUser} 
                   className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 rounded-l-none`}
@@ -615,16 +641,18 @@ export default function TestChatPage() {
                 <MessageSquare className="w-4 h-4 mr-1"/>会话
               </label>
               <div className="flex">
-                <CustomSelectWithOptionDelete
-                  value={selectedSession}
-                  onChange={setSelectedSession}
-                  options={sessions}
-                  placeholder="选择会话"
-                  onDelete={handleDeleteSession}
-                  deleteTitle="删除会话"
-                  disabled={!selectedUser}
-                  className="rounded-r-none"
-                />
+                <div className="flex-1 min-w-0">
+                  <CustomSelectWithOptionDelete
+                    value={selectedSession}
+                    onChange={setSelectedSession}
+                    options={sessions}
+                    placeholder="选择会话"
+                    onDelete={handleDeleteSession}
+                    deleteTitle="删除会话"
+                    disabled={!selectedUser}
+                    className="rounded-r-none"
+                  />
+                </div>
                 <button 
                   onClick={handleCreateSession} 
                   disabled={!selectedUser} 
@@ -857,16 +885,16 @@ export default function TestChatPage() {
                   value={newMessage} 
                   onChange={e => setNewMessage(e.target.value)} 
                   onKeyPress={e => e.key === 'Enter' && handleSendMessage()} 
-                  placeholder={isChatDisabled ? "请先完成顶部设置" : "输入消息..."} 
-                  disabled={isChatDisabled} 
+                  placeholder={isChatDisabled ? "请先完成顶部设置" : (isSending ? "发送中..." : "输入消息...")} 
+                  disabled={isChatDisabled || isSending} 
                   className="w-full p-2 border rounded-md dark:bg-[var(--component-background)] dark:border-[var(--border-color)] dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button 
                   onClick={handleSendMessage} 
-                  disabled={isChatDisabled || !newMessage.trim()} 
-                  className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600`}
+                  disabled={isChatDisabled || !newMessage.trim() || isSending} 
+                  className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 ${isSending ? 'opacity-75' : ''}`}
                 >
-                  <Send className="w-5 h-5"/>
+                  {isSending ? <RefreshCw className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
                 </button>
               </div>
             </div>
