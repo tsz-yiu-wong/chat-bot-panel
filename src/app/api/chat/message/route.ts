@@ -5,6 +5,15 @@ import crypto from 'crypto';
 import { KnowledgeSearchResult, KnowledgeSearchResponse, SessionMetadata } from '@/lib/types/knowledge';
 import { getKnowledgeRetrievalConfig, getChatProcessingConfig } from '@/lib/config/ai-config';
 
+// 动态获取基础URL的辅助函数
+function getBaseUrl() {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // 在本地或其他环境中回退
+  return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+}
+
 // 双语文本配置
 const LANGUAGE_TEXTS = {
   zh: {
@@ -385,7 +394,7 @@ export async function PUT(request: NextRequest) {
       .join('\n\n');
 
     // **获取选择的prompt内容**
-    const promptResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prompts/${prompt_id}`);
+    const promptResponse = await fetch(`${getBaseUrl()}/api/prompts/${prompt_id}`);
     let systemPrompt = '你是一个有用的AI助手。';
     if (promptResponse.ok) {
       const promptData = await promptResponse.json();
@@ -397,7 +406,7 @@ export async function PUT(request: NextRequest) {
     // **1. 人设向量检索**
     let personalityContext = '';
     try {
-      const personalityResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/bot-personality/search`, {
+      const personalityResponse = await fetch(`${getBaseUrl()}/api/bot-personality/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -424,7 +433,7 @@ export async function PUT(request: NextRequest) {
     let abbreviationContext = '';
     let foundAbbreviations: { content: string; similarity: number }[] = [];
     try {
-      const abbreviationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/search`, {
+      const abbreviationResponse = await fetch(`${getBaseUrl()}/api/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -657,7 +666,7 @@ export async function PUT(request: NextRequest) {
           console.warn(`AI消息 ${aiMessage.id} 没有创建向量记录，可能数据库触发器未工作`);
           
           // 手动调用批量向量化作为备用方案
-          const batchResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/vectors/batch`, {
+          const batchResponse = await fetch(`${getBaseUrl()}/api/chat/vectors/batch`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -678,7 +687,7 @@ export async function PUT(request: NextRequest) {
         console.log(`找到 ${vectorCheck.length} 个向量记录:`, vectorCheck.map(v => v.vector_type));
         
         // 为新创建的向量生成embedding
-        const vectorizeResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/vectors`, {
+        const vectorizeResponse = await fetch(`${getBaseUrl()}/api/chat/vectors`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

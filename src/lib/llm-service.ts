@@ -13,6 +13,14 @@ export class LLMService {
     this.baseUrl = process.env.LLM_SERVER_URL || 'http://localhost:8000';
     this.apiKey = process.env.CHAT_BOT_API_KEY;
     
+    // 调试信息 - 帮助诊断Vercel部署问题
+    console.log('🔧 LLM Service 初始化:');
+    console.log('  - 环境:', process.env.NODE_ENV);
+    console.log('  - 服务器URL:', this.baseUrl);
+    console.log('  - API密钥存在:', !!this.apiKey);
+    console.log('  - API密钥长度:', this.apiKey?.length || 0);
+    console.log('  - OPENAI密钥存在:', !!process.env.OPENAI_API_KEY);
+    
     // 初始化OpenAI客户端用于embedding
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY || '',
@@ -82,6 +90,13 @@ export class LLMService {
     maxTokens?: number;
     temperature?: number;
   } = {}) {
+    console.log('🚀 开始LLM调用:', {
+      baseUrl: this.baseUrl,
+      hasApiKey: !!this.apiKey,
+      messagesCount: messages.length,
+      options
+    });
+
     try {
       const {
         maxTokens = 2000,
@@ -110,17 +125,26 @@ export class LLMService {
         temperature,
       };
 
+      console.log('📤 发送请求到:', `${this.baseUrl}/api/v1/chat`);
+      console.log('📤 请求头:', { ...headers, Authorization: this.apiKey ? 'Bearer [HIDDEN]' : undefined });
+      console.log('📤 请求体:', { ...requestBody, messages: `${validMessages.length} messages` });
+
       const response = await fetch(`${this.baseUrl}/api/v1/chat`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
       });
 
+      console.log('📥 响应状态:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ API错误响应:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ API调用成功');
 
       return {
         success: true,
@@ -129,7 +153,7 @@ export class LLMService {
         model: data.model
       };
     } catch (error) {
-      console.error('LLM service error:', error);
+      console.error('❌ LLM service error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
