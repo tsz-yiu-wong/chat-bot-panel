@@ -11,7 +11,7 @@ interface ChatUser {
 }
 interface Prompt {
   id: string;
-  prompt_name: string;
+  name: string;
 }
 interface TopicLibrary {
   id: string;
@@ -58,7 +58,6 @@ interface SelectOption {
   id: string;
   display_name?: string;
   session_name?: string;
-  prompt_name?: string;
   bot_name?: string;
   library_name?: string;
   username?: string;
@@ -517,7 +516,7 @@ export default function TestChatPage() {
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     const selectedOption = options.find(opt => opt.id === value);
-    const selectedName = selectedOption?.display_name || selectedOption?.session_name || selectedOption?.prompt_name || selectedOption?.bot_name || selectedOption?.library_name || selectedOption?.name || '未命名';
+    const selectedName = selectedOption?.display_name || selectedOption?.session_name || selectedOption?.bot_name || selectedOption?.library_name || selectedOption?.name || '未命名';
 
     return (
       <div className="relative">
@@ -555,7 +554,7 @@ export default function TestChatPage() {
                 </div>
               ) : (
                 options.map((option) => {
-                  const displayName = option.display_name || option.session_name || option.prompt_name || option.bot_name || option.library_name || option.name || '未命名';
+                  const displayName = option.display_name || option.session_name || option.bot_name || option.library_name || option.name || '未命名';
                   return (
                     <div
                       key={option.id}

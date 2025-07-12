@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       // 获取Prompt列表 - 过滤软删除记录
       const { data: prompts, error } = await supabase
         .from('prompts')
-        .select('id, prompt_name:name')
+        .select('id, name')
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 

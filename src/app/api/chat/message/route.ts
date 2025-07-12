@@ -421,7 +421,7 @@ export async function PUT(request: NextRequest) {
       const promptData = await promptResponse.json();
       if (promptData.prompt) {
         // 根据语言选择不同的prompt字段
-        const promptField = selectedLanguage === 'vi' ? 'prompt_vi' : 'prompt_cn';
+        const promptField = selectedLanguage === 'vi' ? 'prompt_vn' : 'prompt_cn';
         if (promptData.prompt[promptField]) {
           systemPrompt = promptData.prompt[promptField];
         } else if (promptData.prompt.prompt_cn) {
