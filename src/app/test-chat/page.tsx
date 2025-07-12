@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Users, MessageSquare, Zap, RefreshCw, Bot, FileText, Library, Plus, AlertTriangle, User, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 // 类型定义
 interface ChatUser {
@@ -13,9 +14,11 @@ interface Prompt {
   id: string;
   name: string;
 }
-interface TopicLibrary {
+interface TopicCategory {
   id: string;
-  library_name: string;
+  name_cn: string;
+  name_vn: string;
+  sort_order: number;
 }
 interface BotPersonality {
   id: string;
@@ -59,7 +62,8 @@ interface SelectOption {
   display_name?: string;
   session_name?: string;
   bot_name?: string;
-  library_name?: string;
+  name_cn?: string;
+  name_vn?: string;
   username?: string;
   name?: string;
   nationality?: string;
@@ -68,13 +72,14 @@ interface SelectOption {
   hobbies?: string;
   message_merge_seconds?: number;
   topic_trigger_hours?: number;
+  sort_order?: number;
 }
 
 export default function TestChatPage() {
   // 数据状态
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [topicLibs, setTopicLibs] = useState<TopicLibrary[]>([]);
+  const [topicCategories, setTopicCategories] = useState<TopicCategory[]>([]);
   const [personalities, setPersonalities] = useState<BotPersonality[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,7 +89,7 @@ export default function TestChatPage() {
   const [selectedSession, setSelectedSession] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState('');
   const [selectedPersonality, setSelectedPersonality] = useState('');
-  const [selectedTopicLib, setSelectedTopicLib] = useState('');
+  const [selectedTopicCategory, setSelectedTopicCategory] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<'zh' | 'vi'>('vi');
   
   // 设置状态
@@ -113,7 +118,7 @@ export default function TestChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
   
-  const isChatDisabled = !selectedUser || !selectedSession || !selectedPrompt || !selectedPersonality || !selectedTopicLib;
+  const isChatDisabled = !selectedUser || !selectedSession || !selectedPrompt || !selectedPersonality;
 
   // 通用日志记录
   const addLog = useCallback((message: string, isError = false) => {
@@ -122,35 +127,86 @@ export default function TestChatPage() {
     setLogs(prev => [...prev.slice(-99), `${prefix} [${timestamp}] ${message}`]);
   }, []);
 
-  // 通用数据加载
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const loadData = useCallback(async (endpoint: string, setter: (data: any[]) => void, name: string) => {
+  // 直接从数据库加载数据
+  const loadUsers = useCallback(async () => {
     try {
-      addLog(`正在加载 ${name}...`);
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const itemsKey = Object.keys(data)[0];
-      const items = data[itemsKey] || [];
-      setter(items);
-      addLog(`加载了 ${items.length} 个${name}`);
-      return items;
+      addLog('正在加载用户...');
+      const { data: users, error } = await supabase
+        .from('chat_users')
+        .select('id, username, display_name')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(users || []);
+      addLog(`加载了 ${users?.length || 0} 个用户`);
     } catch (error) {
-      addLog(`加载${name}失败: ${error}`, true);
-      setter([]); // 出错时清空
+      addLog(`加载用户失败: ${error}`, true);
+      setUsers([]);
+    }
+  }, [addLog]);
+
+  const loadPrompts = useCallback(async () => {
+    try {
+      addLog('正在加载 Prompts...');
+      const { data: prompts, error } = await supabase
+        .from('prompts')
+        .select('id, name')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPrompts(prompts || []);
+      addLog(`加载了 ${prompts?.length || 0} 个 Prompt`);
+    } catch (error) {
+      addLog(`加载 Prompts 失败: ${error}`, true);
+      setPrompts([]);
+    }
+  }, [addLog]);
+
+  const loadTopicCategories = useCallback(async () => {
+    try {
+      addLog('正在加载话题大类...');
+      const { data: categories, error } = await supabase
+        .from('topic_categories')
+        .select('id, name_cn, name_vn, sort_order')
+        .eq('is_deleted', false)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setTopicCategories(categories || []);
+      addLog(`加载了 ${categories?.length || 0} 个话题大类`);
+    } catch (error) {
+      addLog(`加载话题大类失败: ${error}`, true);
+      setTopicCategories([]);
+    }
+  }, [addLog]);
+
+  const loadPersonalities = useCallback(async () => {
+    try {
+      addLog('正在加载机器人人设...');
+      const { data: personalities, error } = await supabase
+        .from('bot_personalities')
+        .select('id, bot_name, nationality, age, current_job, hobbies')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPersonalities(personalities || []);
+      addLog(`加载了 ${personalities?.length || 0} 个机器人人设`);
+    } catch (error) {
+      addLog(`加载机器人人设失败: ${error}`, true);
+      setPersonalities([]);
     }
   }, [addLog]);
 
   // 初始化加载
   useEffect(() => {
-    loadData('/api/chat/users', setUsers, '用户');
-    loadData('/api/prompts', setPrompts, 'Prompts');
-    loadData('/api/topics', setTopicLibs, '话题库');
-    loadData('/api/bot-personality', setPersonalities, '机器人人设');
-  }, [loadData]);
+    loadUsers();
+    loadPrompts();
+    loadTopicCategories();
+    loadPersonalities();
+  }, [loadUsers, loadPrompts, loadTopicCategories, loadPersonalities]);
 
   // 根据选择加载数据
   const loadSessions = useCallback(async (userId: string) => {
@@ -159,23 +215,50 @@ export default function TestChatPage() {
       setSelectedSession('');
       return [];
     }
-    const loadedSessions = await loadData(`/api/chat/sessions?user_id=${userId}`, setSessions, `用户会话`);
-    if (loadedSessions && loadedSessions.length === 0) {
-      setSelectedSession('');
+    
+    try {
+      addLog(`正在加载用户会话...`);
+      const { data: sessions, error } = await supabase
+        .from('chat_sessions')
+        .select('id, session_name, message_merge_seconds, topic_trigger_hours')
+        .eq('user_id', userId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSessions(sessions || []);
+      addLog(`加载了 ${sessions?.length || 0} 个用户会话`);
+      
+      if (sessions && sessions.length === 0) {
+        setSelectedSession('');
+      }
+      return sessions || [];
+    } catch (error) {
+      addLog(`加载用户会话失败: ${error}`, true);
+      setSessions([]);
+      return [];
     }
-    return loadedSessions || [];
-  }, [loadData]);
+  }, [addLog]);
 
   const loadMessages = useCallback(async (sessionId: string) => {
     if (!sessionId) {
       setMessages([]);
       return;
     }
-    const data = await fetch(`/api/chat/message?session_id=${sessionId}`);
-    const json = await data.json();
-    if (json.messages) {
-      setMessages(json.messages);
-      addLog(`加载了 ${json.messages.length} 条消息`);
+    
+    try {
+      const { data: messages, error } = await supabase
+        .from('chat_messages')
+        .select('id, role, content, created_at, is_processed')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setMessages(messages || []);
+      addLog(`加载了 ${messages?.length || 0} 条消息`);
+    } catch (error) {
+      addLog(`加载消息失败: ${error}`, true);
+      setMessages([]);
     }
   }, [addLog]);
 
@@ -240,25 +323,25 @@ export default function TestChatPage() {
       const uniqueUsername = `test_user_${timestamp}`;
       const uniqueDisplayName = `测试用户${users.length + 1}`;
       
-      const response = await fetch('/api/chat/users', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
+      const { data: user, error } = await supabase
+        .from('chat_users')
+        .insert([{ 
           username: uniqueUsername, 
           display_name: uniqueDisplayName 
-        }) 
-      });
-      const data = await response.json();
-      if (data.user) {
-        addLog(`用户创建成功: ${data.user.display_name}`);
-        // 重新加载用户列表
-        const updatedUsers = await loadData('/api/chat/users', setUsers, '用户');
-        // 自动选择新创建的用户
-        if (updatedUsers && data.user.id) {
-          setSelectedUser(data.user.id);
-          addLog(`已自动选择用户: ${data.user.display_name}`);
-        }
-      } else throw new Error(data.error);
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      addLog(`用户创建成功: ${user.display_name}`);
+      // 重新加载用户列表
+      await loadUsers();
+      // 自动选择新创建的用户
+      if (user.id) {
+        setSelectedUser(user.id);
+        addLog(`已自动选择用户: ${user.display_name}`);
+      }
     } catch (error) { 
       addLog(`创建用户失败: ${error}`, true); 
     } finally {
@@ -276,27 +359,27 @@ export default function TestChatPage() {
       const timestamp = Date.now();
       const uniqueSessionName = `测试会话${sessions.length + 1}_${timestamp}`;
       
-      const response = await fetch('/api/chat/sessions', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
+      const { data: session, error } = await supabase
+        .from('chat_sessions')
+        .insert([{ 
           user_id: selectedUser, 
           session_name: uniqueSessionName, 
           message_merge_seconds: mergeSeconds, 
           topic_trigger_hours: topicHours 
-        }) 
-      });
-      const data = await response.json();
-      if (data.session) {
-        addLog(`会话创建成功: ${data.session.session_name}`);
-        // 重新加载会话列表
-        const updatedSessions = await loadSessions(selectedUser);
-        // 自动选择新创建的会话
-        if (updatedSessions && data.session.id) {
-          setSelectedSession(data.session.id);
-          addLog(`已自动选择会话: ${data.session.session_name}`);
-        }
-      } else throw new Error(data.error);
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      addLog(`会话创建成功: ${session.session_name}`);
+      // 重新加载会话列表
+      const updatedSessions = await loadSessions(selectedUser);
+      // 自动选择新创建的会话
+      if (updatedSessions && session.id) {
+        setSelectedSession(session.id);
+        addLog(`已自动选择会话: ${session.session_name}`);
+      }
     } catch (error) { 
       addLog(`创建会话失败: ${error}`, true); 
     } finally {
@@ -312,23 +395,22 @@ export default function TestChatPage() {
     
     try {
       addLog(`正在删除用户: ${displayName}...`);
-      const response = await fetch(`/api/chat/users?id=${userId}`, { 
-        method: 'DELETE' 
-      });
-      const data = await response.json();
-      if (response.ok) {
-        addLog(`用户删除成功: ${displayName}`);
-        // 如果删除的是当前选中的用户，清空选择
-        if (selectedUser === userId) {
-          setSelectedUser('');
-          setSelectedSession('');
-          setSessions([]);
-        }
-        // 重新加载用户列表
-        loadData('/api/chat/users', setUsers, '用户');
-      } else {
-        throw new Error(data.error || '删除失败');
+      const { error } = await supabase
+        .from('chat_users')
+        .update({ is_deleted: true })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      addLog(`用户删除成功: ${displayName}`);
+      // 如果删除的是当前选中的用户，清空选择
+      if (selectedUser === userId) {
+        setSelectedUser('');
+        setSelectedSession('');
+        setSessions([]);
       }
+      // 重新加载用户列表
+      loadUsers();
     } catch (error) { 
       addLog(`删除用户失败: ${error}`, true); 
     }
@@ -342,23 +424,22 @@ export default function TestChatPage() {
     
     try {
       addLog(`正在删除会话: ${sessionName}...`);
-      const response = await fetch(`/api/chat/sessions?id=${sessionId}`, { 
-        method: 'DELETE' 
-      });
-      const data = await response.json();
-      if (response.ok) {
-        addLog(`会话删除成功: ${sessionName}`);
-        // 如果删除的是当前选中的会话，清空选择
-        if (selectedSession === sessionId) {
-          setSelectedSession('');
-          setMessages([]);
-        }
-        // 重新加载会话列表
-        if (selectedUser) {
-          loadSessions(selectedUser);
-        }
-      } else {
-        throw new Error(data.error || '删除失败');
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ is_deleted: true })
+        .eq('id', sessionId);
+
+      if (error) throw error;
+      
+      addLog(`会话删除成功: ${sessionName}`);
+      // 如果删除的是当前选中的会话，清空选择
+      if (selectedSession === sessionId) {
+        setSelectedSession('');
+        setMessages([]);
+      }
+      // 重新加载会话列表
+      if (selectedUser) {
+        loadSessions(selectedUser);
       }
     } catch (error) { 
       addLog(`删除会话失败: ${error}`, true); 
@@ -441,22 +522,58 @@ export default function TestChatPage() {
   };
 
   const handleSendTopic = async () => {
-    if (!selectedSession || !selectedTopicLib) return;
+    if (!selectedSession || !selectedTopicCategory) return;
     setIsProcessing(true);
+    
     try {
-      const response = await fetch('/api/chat/trigger-topic', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      addLog('正在发起话题...');
+      
+      // 首先从选中的大类中随机选择一个小类
+      const { data: subcategories, error: subcategoryError } = await supabase
+        .from('topic_subcategories')
+        .select('id')
+        .eq('category_id', selectedTopicCategory)
+        .eq('is_deleted', false);
+
+      if (subcategoryError || !subcategories || subcategories.length === 0) {
+        throw new Error('该话题大类下没有找到小类');
+      }
+
+      const randomSubcategory = subcategories[Math.floor(Math.random() * subcategories.length)];
+      
+      // 然后从选中的小类中随机选择一个话题
+      const { data: topics, error: topicError } = await supabase
+        .from('topics')
+        .select('content')
+        .eq('subcategory_id', randomSubcategory.id)
+        .eq('is_deleted', false);
+
+      if (topicError || !topics || topics.length === 0) {
+        throw new Error('该话题小类下没有找到话题');
+      }
+
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      
+      // 将话题作为 'topic' 角色的消息插入
+      const { error: insertError } = await supabase
+        .from('chat_messages')
+        .insert({
           session_id: selectedSession,
-          topic_category_id: selectedTopicLib
-        })
-      });
-      const data = await response.json();
-      if (data.success) {
-        addLog(`话题发送成功`);
-        loadMessages(selectedSession);
-      } else throw new Error(data.error);
+          role: 'topic',
+          content: randomTopic.content,
+          is_processed: true, // 标记为已处理，不进入LLM流程
+        });
+
+      if (insertError) throw insertError;
+      
+      // 更新会话的最后消息时间
+      await supabase
+        .from('chat_sessions')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', selectedSession);
+
+      addLog(`话题发送成功: ${randomTopic.content.substring(0, 30)}...`);
+      loadMessages(selectedSession);
     } catch (error) {
       addLog(`发送话题失败: ${error}`, true);
     } finally {
@@ -544,7 +661,18 @@ export default function TestChatPage() {
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     const selectedOption = options.find(opt => opt.id === value);
-    const selectedName = selectedOption?.display_name || selectedOption?.session_name || selectedOption?.bot_name || selectedOption?.library_name || selectedOption?.name || '未命名';
+    
+    // 根据选项类型确定显示名称
+    let selectedName = '';
+    if (selectedOption) {
+      if (selectedOption.name_vn && selectedOption.name_cn) {
+        // 话题大类的格式："越南文（中文）"
+        selectedName = `${selectedOption.name_vn}（${selectedOption.name_cn}）`;
+      } else {
+        // 其他选项的格式
+        selectedName = selectedOption.display_name || selectedOption.session_name || selectedOption.bot_name || selectedOption.name || '未命名';
+      }
+    }
 
     return (
       <div className="relative">
@@ -582,7 +710,16 @@ export default function TestChatPage() {
                 </div>
               ) : (
                 options.map((option) => {
-                  const displayName = option.display_name || option.session_name || option.bot_name || option.library_name || option.name || '未命名';
+                  // 根据选项类型确定显示名称
+                  let displayName = '';
+                  if (option.name_vn && option.name_cn) {
+                    // 话题大类的格式："越南文（中文）"
+                    displayName = `${option.name_vn}（${option.name_cn}）`;
+                  } else {
+                    // 其他选项的格式
+                    displayName = option.display_name || option.session_name || option.bot_name || option.name || '未命名';
+                  }
+                  
                   return (
                     <div
                       key={option.id}
@@ -718,16 +855,16 @@ export default function TestChatPage() {
               />
             </div>
 
-            {/* 话题库选择 */}
+            {/* 话题大类选择 */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold mb-1 flex items-center text-gray-700 dark:text-gray-300">
-                <Library className="w-4 h-4 mr-1"/>话题库
+                <Library className="w-4 h-4 mr-1"/>话题大类
               </label>
               <CustomSelectWithOptionDelete
-                value={selectedTopicLib}
-                onChange={setSelectedTopicLib}
-                options={topicLibs}
-                placeholder="选择话题库"
+                value={selectedTopicCategory}
+                onChange={setSelectedTopicCategory}
+                options={topicCategories}
+                placeholder="选择话题大类"
               />
             </div>
 
@@ -736,7 +873,7 @@ export default function TestChatPage() {
                 {/* 添加空的label以匹配其他选项的高度结构 */}
                 <div className="text-sm font-semibold mb-1 opacity-0">操作</div>
                 <div className="flex gap-2">
-                    <button onClick={handleSendTopic} disabled={!selectedSession || !selectedTopicLib || isProcessing} className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 flex-grow flex items-center justify-center`}>
+                    <button onClick={handleSendTopic} disabled={!selectedSession || !selectedTopicCategory || isProcessing} className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 flex-grow flex items-center justify-center`}>
                         <Zap className="w-4 h-4 mr-1"/>{isProcessing ? "发送中..." : "发起话题"}
                     </button>
                     <button onClick={handleProcessMessages} disabled={!selectedSession || isProcessing} className={`${coloredButtonClass} bg-orange-500 hover:bg-orange-600 flex-grow flex items-center justify-center`}>
@@ -886,7 +1023,7 @@ export default function TestChatPage() {
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
                     <AlertTriangle className="w-12 h-12 mb-4"/>
-                    <p>请在顶部选择 用户、会话、Prompt、人设 和 话题库 以开始聊天</p>
+                    <p>请在顶部选择 用户、会话、Prompt 和 人设 以开始聊天</p>
                 </div>
               )}
               {messages.map(msg => (
@@ -914,7 +1051,7 @@ export default function TestChatPage() {
                   value={newMessage} 
                   onChange={e => setNewMessage(e.target.value)} 
                   onKeyPress={e => e.key === 'Enter' && handleSendMessage()} 
-                  placeholder={isChatDisabled ? "请先完成顶部设置" : (isSending ? "发送中..." : "输入消息...")} 
+                  placeholder={isChatDisabled ? "请先完成顶部设置（用户、会话、Prompt、人设）" : (isSending ? "发送中..." : "输入消息...")} 
                   disabled={isChatDisabled || isSending} 
                   className="w-full p-2 border rounded-md dark:bg-[var(--component-background)] dark:border-[var(--border-color)] dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 />

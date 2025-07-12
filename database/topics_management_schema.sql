@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS topic_categories (
     name_vn VARCHAR(255) NOT NULL,
     sort_order INTEGER DEFAULT 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- 2. 创建话题小类表
@@ -23,7 +24,8 @@ CREATE TABLE IF NOT EXISTS topic_subcategories (
     name_vn VARCHAR(255) NOT NULL,
     sort_order INTEGER DEFAULT 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- 3. 创建话题表
@@ -35,7 +37,8 @@ CREATE TABLE IF NOT EXISTS topics (
     usage_count INTEGER DEFAULT 0,
     sort_order INTEGER DEFAULT 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- ===== 数据库结构更新 =====
