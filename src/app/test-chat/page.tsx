@@ -107,6 +107,8 @@ export default function TestChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSending, setIsSending] = useState(false); // 新增发送状态
+  const [isCreatingUser, setIsCreatingUser] = useState(false); // 新增创建用户状态
+  const [isCreatingSession, setIsCreatingSession] = useState(false); // 新增创建会话状态
   const [logs, setLogs] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -155,12 +157,13 @@ export default function TestChatPage() {
     if (!userId) {
       setSessions([]);
       setSelectedSession('');
-      return;
+      return [];
     }
     const loadedSessions = await loadData(`/api/chat/sessions?user_id=${userId}`, setSessions, `用户会话`);
     if (loadedSessions && loadedSessions.length === 0) {
       setSelectedSession('');
     }
+    return loadedSessions || [];
   }, [loadData]);
 
   const loadMessages = useCallback(async (sessionId: string) => {
@@ -227,6 +230,9 @@ export default function TestChatPage() {
 
   // API操作
   const handleCreateUser = async () => {
+    if (isCreatingUser) return; // 防止重复点击
+    
+    setIsCreatingUser(true);
     try {
       addLog('正在创建用户...');
       // 生成唯一的用户名，使用时间戳确保唯一性
@@ -245,13 +251,25 @@ export default function TestChatPage() {
       const data = await response.json();
       if (data.user) {
         addLog(`用户创建成功: ${data.user.display_name}`);
-        loadData('/api/chat/users', setUsers, '用户');
+        // 重新加载用户列表
+        const updatedUsers = await loadData('/api/chat/users', setUsers, '用户');
+        // 自动选择新创建的用户
+        if (updatedUsers && data.user.id) {
+          setSelectedUser(data.user.id);
+          addLog(`已自动选择用户: ${data.user.display_name}`);
+        }
       } else throw new Error(data.error);
-    } catch (error) { addLog(`创建用户失败: ${error}`, true); }
+    } catch (error) { 
+      addLog(`创建用户失败: ${error}`, true); 
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   const handleCreateSession = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || isCreatingSession) return; // 防止重复点击
+    
+    setIsCreatingSession(true);
     try {
       addLog('正在创建会话...');
       // 生成唯一的会话名，使用时间戳确保唯一性
@@ -271,9 +289,19 @@ export default function TestChatPage() {
       const data = await response.json();
       if (data.session) {
         addLog(`会话创建成功: ${data.session.session_name}`);
-        loadSessions(selectedUser);
+        // 重新加载会话列表
+        const updatedSessions = await loadSessions(selectedUser);
+        // 自动选择新创建的会话
+        if (updatedSessions && data.session.id) {
+          setSelectedSession(data.session.id);
+          addLog(`已自动选择会话: ${data.session.session_name}`);
+        }
       } else throw new Error(data.error);
-    } catch (error) { addLog(`创建会话失败: ${error}`, true); }
+    } catch (error) { 
+      addLog(`创建会话失败: ${error}`, true); 
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   // 删除用户
@@ -623,13 +651,15 @@ export default function TestChatPage() {
                     onDelete={handleDeleteUser}
                     deleteTitle="删除用户"
                     className="rounded-r-none"
+                    disabled={isCreatingUser || isCreatingSession} // 创建过程中禁用
                   />
                 </div>
                 <button 
                   onClick={handleCreateUser} 
+                  disabled={isCreatingUser || isCreatingSession} // 创建过程中禁用
                   className={`${coloredButtonClass} bg-blue-500 hover:bg-blue-600 rounded-l-none`}
                 >
-                  <Plus className="w-4 h-4"/>
+                  {isCreatingUser ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Plus className="w-4 h-4"/>}
                 </button>
               </div>
             </div>
@@ -648,16 +678,16 @@ export default function TestChatPage() {
                     placeholder="选择会话"
                     onDelete={handleDeleteSession}
                     deleteTitle="删除会话"
-                    disabled={!selectedUser}
+                    disabled={!selectedUser || isCreatingUser || isCreatingSession} // 创建过程中禁用
                     className="rounded-r-none"
                   />
                 </div>
                 <button 
                   onClick={handleCreateSession} 
-                  disabled={!selectedUser} 
+                  disabled={!selectedUser || isCreatingUser || isCreatingSession} // 创建过程中禁用
                   className={`${coloredButtonClass} bg-green-500 hover:bg-green-600 rounded-l-none`}
                 >
-                  <Plus className="w-4 h-4"/>
+                  {isCreatingSession ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Plus className="w-4 h-4"/>}
                 </button>
               </div>
             </div>
