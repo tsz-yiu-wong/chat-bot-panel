@@ -7,11 +7,31 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
+// 多语言文本配置
+const SEARCH_LANGUAGE_TEXTS = {
+  zh: {
+    abbreviationPrefix: '缩写',
+    fullFormPrefix: '完整形式',
+    descriptionPrefix: '描述',
+    scriptSuffix: '话术',
+    userPrefix: '用户',
+    answerPrefix: '回答'
+  },
+  vi: {
+    abbreviationPrefix: 'Từ viết tắt',
+    fullFormPrefix: 'Dạng đầy đủ',
+    descriptionPrefix: 'Mô tả',
+    scriptSuffix: 'Kịch bản',
+    userPrefix: 'Người dùng',
+    answerPrefix: 'Câu trả lời'
+  }
+};
+
 // 搜索相似文档
 export async function POST(request: NextRequest) {
   try {
     const config = getKnowledgeRetrievalConfig()
-    const { query, limit = config.general_knowledge.limit, similarity_threshold = config.general_knowledge.similarity_threshold, document_type } = await request.json()
+    const { query, limit = config.general_knowledge.limit, similarity_threshold = config.general_knowledge.similarity_threshold, document_type, language = 'zh' } = await request.json()
     
     if (!query) {
       return NextResponse.json(
@@ -19,6 +39,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 验证语言参数
+    const selectedLanguage = (language === 'vi') ? 'vi' : 'zh';
+    const texts = SEARCH_LANGUAGE_TEXTS[selectedLanguage];
 
     // 1. 生成查询向量
     const embeddingResponse = await openai.embeddings.create({
@@ -48,7 +72,7 @@ export async function POST(request: NextRequest) {
     // 移除详细的进度日志，只在开发环境下输出
     const isDev = process.env.NODE_ENV === 'development'
     if (isDev) {
-      console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}${document_type ? `，文档类型: ${document_type}` : ''}`)
+      console.log(`开始处理 ${vectors.length} 个向量，查询: "${query}"，阈值: ${similarity_threshold}${document_type ? `，文档类型: ${document_type}` : ''}，语言: ${selectedLanguage}`)
     }
     
     for (const vector of vectors) {
@@ -106,7 +130,7 @@ export async function POST(request: NextRequest) {
               
             if (abbr) {
               title = `${abbr.abbreviation} - ${abbr.full_form}`
-              content = `缩写: ${abbr.abbreviation} | 完整形式: ${abbr.full_form}${abbr.description ? ` | 描述: ${abbr.description}` : ''}`
+              content = `${texts.abbreviationPrefix}: ${abbr.abbreviation} | ${texts.fullFormPrefix}: ${abbr.full_form}${abbr.description ? ` | ${texts.descriptionPrefix}: ${abbr.description}` : ''}`
               type = 'abbreviation'
               metadata = { ...metadata, category: abbr.category, abbreviation: abbr.abbreviation, full_form: abbr.full_form }
             }
@@ -123,8 +147,8 @@ export async function POST(request: NextRequest) {
             }
               
             if (script) {
-              title = `${script.scenario} - 话术`
-              content = `用户: ${script.text} | 回答: ${script.answer}`
+              title = `${script.scenario} - ${texts.scriptSuffix}`
+              content = `${texts.userPrefix}: ${script.text} | ${texts.answerPrefix}: ${script.answer}`
               type = 'script'
               metadata = { ...metadata, scenario: script.scenario }
             }
@@ -182,7 +206,8 @@ export async function POST(request: NextRequest) {
         similarity_threshold,
         query,
         document_type: document_type || 'all',
-        found_above_threshold: results.length
+        found_above_threshold: results.length,
+        language: selectedLanguage
       }
     })
 

@@ -22,7 +22,17 @@ const LANGUAGE_TEXTS = {
     highSimilarityScript: (similarity: number) => `\n\n这是标准话术场景 (相似度${similarity.toFixed(3)})，必须严格参考以下标准回答：\n"`,
     highSimilarityEnd: '"\n不要额外添加解释、分析或内容。',
     knowledgeReference: '\n\n参考相关信息：\n',
-    knowledgeInstruction: '\n\n请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。'
+    knowledgeInstruction: '\n\n请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。',
+    similarQuestion: '相似问题',
+    suggestedAnswer: '建议回答',
+    relatedInfo: '相关信息',
+    defaultSystemPrompt: '你是一个有用的AI助手。',
+    abbreviationPrefix: '缩写',
+    fullFormPrefix: '完整形式',
+    descriptionPrefix: '描述',
+    scriptSuffix: '话术',
+    userPrefix: '用户',
+    answerPrefix: '回答'
   },
   vi: {
     personalityContext: (similarity: number) => `\n\nDựa trên thông tin nhân vật (độ tương tự: ${similarity.toFixed(3)}):\n`,
@@ -30,7 +40,17 @@ const LANGUAGE_TEXTS = {
     highSimilarityScript: (similarity: number) => `\n\nĐây là kịch bản chuẩn (độ tương tự ${similarity.toFixed(3)}), phải tham khảo nghiêm ngặt câu trả lời chuẩn sau:\n"`,
     highSimilarityEnd: '"\nKhông được thêm giải thích, phân tích hoặc nội dung bổ sung.',
     knowledgeReference: '\n\nTham khảo thông tin liên quan:\n',
-    knowledgeInstruction: '\n\nVui lòng tham khảo thông tin trên để trả lời câu hỏi của người dùng. Nếu có câu hỏi và câu trả lời tương tự, có thể tham khảo phong cách và nội dung của chúng.'
+    knowledgeInstruction: '\n\nVui lòng tham khảo thông tin trên để trả lời câu hỏi của người dùng. Nếu có câu hỏi và câu trả lời tương tự, có thể tham khảo phong cách và nội dung của chúng.',
+    similarQuestion: 'Câu hỏi tương tự',
+    suggestedAnswer: 'Câu trả lời đề xuất',
+    relatedInfo: 'Thông tin liên quan',
+    defaultSystemPrompt: 'Bạn là một trợ lý AI hữu ích.',
+    abbreviationPrefix: 'Từ viết tắt',
+    fullFormPrefix: 'Dạng đầy đủ',
+    descriptionPrefix: 'Mô tả',
+    scriptSuffix: 'Kịch bản',
+    userPrefix: 'Người dùng',
+    answerPrefix: 'Câu trả lời'
   }
 };
 
@@ -59,11 +79,12 @@ function createSupabaseServer() {
 }
 
 // 内部向量搜索函数
-async function searchKnowledgeBase(query: string, similarity_threshold?: number, limit?: number) {
+async function searchKnowledgeBase(query: string, similarity_threshold?: number, limit?: number, language: 'zh' | 'vi' = 'zh') {
   try {
     const config = getKnowledgeRetrievalConfig();
     const actualThreshold = similarity_threshold ?? config.general_knowledge.similarity_threshold;
     const actualLimit = limit ?? config.general_knowledge.limit;
+    const texts = LANGUAGE_TEXTS[language];
     
     const supabase = createSupabaseServer();
     
@@ -131,7 +152,7 @@ async function searchKnowledgeBase(query: string, similarity_threshold?: number,
               
             if (abbr) {
               title = `${abbr.abbreviation} - ${abbr.full_form}`;
-              content = `缩写: ${abbr.abbreviation} | 完整形式: ${abbr.full_form}${abbr.description ? ` | 描述: ${abbr.description}` : ''}`;
+              content = `${texts.abbreviationPrefix}: ${abbr.abbreviation} | ${texts.fullFormPrefix}: ${abbr.full_form}${abbr.description ? ` | ${texts.descriptionPrefix}: ${abbr.description}` : ''}`;
               type = 'abbreviation';
             }
           } else if (vector.document_type === 'script') {
@@ -142,8 +163,8 @@ async function searchKnowledgeBase(query: string, similarity_threshold?: number,
               .single();
               
             if (script) {
-              title = `${script.scenario} - 话术`;
-              content = `用户: ${script.text} | 回答: ${script.answer}`;
+              title = `${script.scenario} - ${texts.scriptSuffix}`;
+              content = `${texts.userPrefix}: ${script.text} | ${texts.answerPrefix}: ${script.answer}`;
               type = 'script';
             }
           }
@@ -395,11 +416,18 @@ export async function PUT(request: NextRequest) {
 
     // **获取选择的prompt内容**
     const promptResponse = await fetch(`${getBaseUrl()}/api/prompts/${prompt_id}`);
-    let systemPrompt = '你是一个有用的AI助手。';
+    let systemPrompt = texts.defaultSystemPrompt;
     if (promptResponse.ok) {
       const promptData = await promptResponse.json();
-      if (promptData.prompt && promptData.prompt.prompt_cn) {
-        systemPrompt = promptData.prompt.prompt_cn;
+      if (promptData.prompt) {
+        // 根据语言选择不同的prompt字段
+        const promptField = selectedLanguage === 'vi' ? 'prompt_vi' : 'prompt_cn';
+        if (promptData.prompt[promptField]) {
+          systemPrompt = promptData.prompt[promptField];
+        } else if (promptData.prompt.prompt_cn) {
+          // 如果没有对应语言的prompt，回退到中文
+          systemPrompt = promptData.prompt.prompt_cn;
+        }
       }
     }
 
@@ -440,7 +468,8 @@ export async function PUT(request: NextRequest) {
           query: mergedContent,
           document_type: 'abbreviation',
           similarity_threshold: knowledgeConfig.abbreviation_recognition.similarity_threshold,  // 使用配置
-          limit: knowledgeConfig.abbreviation_recognition.limit  // 使用配置
+          limit: knowledgeConfig.abbreviation_recognition.limit,  // 使用配置
+          language: selectedLanguage // 传递语言参数
         })
       });
 
@@ -450,7 +479,8 @@ export async function PUT(request: NextRequest) {
           // 按缩写分组，每个缩写只取最高相似度的
           const abbrGroups: { [key: string]: { content: string; similarity: number } } = {};
           abbrData.results.forEach((result: { content: string; similarity: number }) => {
-            const abbrMatch = result.content.match(/缩写:\s*([^|]+)/);
+            // 动态匹配缩写前缀，支持多语言
+            const abbrMatch = result.content.match(new RegExp(`${texts.abbreviationPrefix}:\\s*([^|]+)`));
             if (abbrMatch) {
               const abbr = abbrMatch[1].trim();
               if (!abbrGroups[abbr] || result.similarity > abbrGroups[abbr].similarity) {
@@ -473,10 +503,12 @@ export async function PUT(request: NextRequest) {
     let knowledgeContext = '';
     let searchResponse: KnowledgeSearchResponse = { results: [] };
     try {
-      // 调用向量搜索API获取相关知识
+      // 调用向量搜索API获取相关知识，传递语言参数
       searchResponse = await searchKnowledgeBase(
         mergedContent, 
-        knowledgeConfig.script_library.similarity_threshold  // 使用配置
+        knowledgeConfig.script_library.similarity_threshold,  // 使用配置
+        undefined, // 使用默认limit
+        selectedLanguage // 传递语言参数
       );
 
       if (searchResponse.results && searchResponse.results.length > 0) {
@@ -490,7 +522,7 @@ export async function PUT(request: NextRequest) {
         if (veryHighSimilarityScripts.length > 0) {
           // 高相似度：强力要求使用话术回答
           const scriptAnswers = veryHighSimilarityScripts.map((result: KnowledgeSearchResult) => {
-            const match = result.content.match(/回答:\s*(.+)$/);
+            const match = result.content.match(new RegExp(`${texts.answerPrefix}:\\s*(.+)$`));
             return match ? match[1] : result.content;
           });
 
@@ -502,13 +534,13 @@ export async function PUT(request: NextRequest) {
           const knowledgeItems = searchResponse.results.slice(0, 3).map((result: KnowledgeSearchResult) => {
             if (result.type === 'script') {
               // 对于话术，提取用户问题和回答
-              const userMatch = result.content.match(/用户:\s*([^|]+)/);
-              const answerMatch = result.content.match(/回答:\s*(.+)$/);
+              const userMatch = result.content.match(new RegExp(`${texts.userPrefix}:\\s*([^|]+)`));
+              const answerMatch = result.content.match(new RegExp(`${texts.answerPrefix}:\\s*(.+)$`));
               if (userMatch && answerMatch) {
-                return `相似问题："${userMatch[1].trim()}" → 建议回答："${answerMatch[1].trim()}"`;
+                return `${texts.similarQuestion}："${userMatch[1].trim()}" → ${texts.suggestedAnswer}："${answerMatch[1].trim()}"`;
               }
             } else if (result.type === 'abbreviation') {
-              return `相关信息：${result.content}`;
+              return `${texts.relatedInfo}：${result.content}`;
             }
             return result.content;
           }).join('\n');
@@ -563,8 +595,8 @@ export async function PUT(request: NextRequest) {
     let finalContent = llmResponse.content;
     if (foundAbbreviations.length > 0) {
       foundAbbreviations.forEach(abbr => {
-        const fullFormMatch = abbr.content.match(/完整形式:\s*([^|]+)/);
-        const abbrMatch = abbr.content.match(/缩写:\s*([^|]+)/);
+        const fullFormMatch = abbr.content.match(new RegExp(`${texts.fullFormPrefix}:\\s*([^|]+)`));
+        const abbrMatch = abbr.content.match(new RegExp(`${texts.abbreviationPrefix}:\\s*([^|]+)`));
         if (fullFormMatch && abbrMatch) {
           const fullForm = fullFormMatch[1].trim();
           const abbreviation = abbrMatch[1].trim();
