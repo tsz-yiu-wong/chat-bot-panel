@@ -415,50 +415,97 @@ export async function PUT(request: NextRequest) {
     }
 
     // **获取选择的prompt内容**
-    const promptResponse = await fetch(`${getBaseUrl()}/api/prompts/${prompt_id}`);
     let systemPrompt = texts.defaultSystemPrompt;
-    if (promptResponse.ok) {
-      const promptData = await promptResponse.json();
-      if (promptData.prompt) {
+    try {
+      // 直接调用Supabase，避免内部API调用
+      const { data: promptData, error: promptError } = await supabase
+        .from('prompts')
+        .select('*')
+        .eq('id', prompt_id)
+        .eq('is_deleted', false)
+        .single();
+
+      if (promptError) {
+        console.error('获取Prompt失败:', promptError);
+      } else if (promptData) {
         // 根据语言选择不同的prompt字段
         const promptField = selectedLanguage === 'vi' ? 'prompt_vn' : 'prompt_cn';
-        if (promptData.prompt[promptField]) {
-          systemPrompt = promptData.prompt[promptField];
-        } else if (promptData.prompt.prompt_cn) {
+        if (promptData[promptField]) {
+          systemPrompt = promptData[promptField];
+        } else if (promptData.prompt_cn) {
           // 如果没有对应语言的prompt，回退到中文
-          systemPrompt = promptData.prompt.prompt_cn;
+          systemPrompt = promptData.prompt_cn;
         } else {
           console.warn(`Prompt数据中没有找到${promptField}或prompt_cn字段`);
         }
       } else {
-        console.warn(`Prompt响应中没有prompt字段`);
+        console.warn(`未找到Prompt记录: ${prompt_id}`);
       }
-    } else {
-      console.error(`获取Prompt失败: ${promptResponse.status}`);
+    } catch (error) {
+      console.error('获取Prompt失败:', error);
     }
 
     // **1. 人设向量检索**
     let personalityContext = '';
     try {
-      const personalityResponse = await fetch(`${getBaseUrl()}/api/bot-personality/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: mergedContent,
-          include_bot_id: personality_id,
-          similarity_threshold: knowledgeConfig.personality_matching.similarity_threshold,  // 使用配置
-          limit: knowledgeConfig.personality_matching.limit  // 使用配置
-        })
-      });
+      // 直接进行人设向量检索，避免内部API调用
+      const queryEmbedding = await llmService.generateEmbedding(mergedContent);
+      
+      if (queryEmbedding && queryEmbedding.length > 0) {
+        // 获取指定机器人的向量数据
+        const { data: vectors, error: vectorError } = await supabase
+          .from('bot_vectors')
+          .select('bot_id, vector_type, content, embedding, metadata')
+          .eq('is_deleted', false)
+          .eq('bot_id', personality_id)
+          .not('embedding', 'is', null);
 
-      if (personalityResponse.ok) {
-        const personalityData = await personalityResponse.json();
-        if (personalityData.results && personalityData.results.length > 0) {
-          const bestMatch = personalityData.results[0];
-          personalityContext = texts.personalityContext(bestMatch.similarity) + bestMatch.content;
+        if (vectorError) {
+          console.error('获取人设向量失败:', vectorError);
+        } else if (vectors && vectors.length > 0) {
+          // 计算相似度并找到最佳匹配
+          const results = [];
+          for (const vector of vectors) {
+            try {
+              let embedding: number[];
+              
+              if (typeof vector.embedding === 'string') {
+                try {
+                  embedding = JSON.parse(vector.embedding);
+                } catch {
+                  continue;
+                }
+              } else if (Array.isArray(vector.embedding)) {
+                embedding = vector.embedding;
+              } else {
+                continue;
+              }
+
+              if (!Array.isArray(embedding) || embedding.length !== queryEmbedding.length) {
+                continue;
+              }
+
+              const similarity = cosineSimilarity(queryEmbedding, embedding);
+              
+              if (similarity >= knowledgeConfig.personality_matching.similarity_threshold) {
+                results.push({
+                  content: vector.content,
+                  similarity: similarity
+                });
+              }
+            } catch (err) {
+              console.error(`处理人设向量 ${vector.bot_id} 时出错:`, err);
+              continue;
+            }
+          }
+
+          // 选择最佳匹配
+          if (results.length > 0) {
+            results.sort((a, b) => b.similarity - a.similarity);
+            const bestMatch = results[0];
+            personalityContext = texts.personalityContext(bestMatch.similarity) + bestMatch.content;
+          }
         }
-      } else {
-        console.error(`人设检索失败: ${personalityResponse.status}`);
       }
     } catch (error) {
       console.error('人设检索失败:', error);
@@ -468,41 +515,91 @@ export async function PUT(request: NextRequest) {
     let abbreviationContext = '';
     let foundAbbreviations: { content: string; similarity: number }[] = [];
     try {
-      const abbreviationResponse = await fetch(`${getBaseUrl()}/api/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: mergedContent,
-          document_type: 'abbreviation',
-          similarity_threshold: knowledgeConfig.abbreviation_recognition.similarity_threshold,  // 使用配置
-          limit: knowledgeConfig.abbreviation_recognition.limit,  // 使用配置
-          language: selectedLanguage // 传递语言参数
-        })
-      });
+      // 直接进行缩写检索，避免内部API调用
+      const queryEmbedding = await llmService.generateEmbedding(mergedContent);
+      
+      if (queryEmbedding && queryEmbedding.length > 0) {
+        // 获取缩写类型的向量数据
+        const { data: vectors, error: vectorError } = await supabase
+          .from('knowledge_vectors')
+          .select('document_id, document_type, embedding, metadata')
+          .eq('document_type', 'abbreviation')
+          .not('embedding', 'is', null);
 
-      if (abbreviationResponse.ok) {
-        const abbrData = await abbreviationResponse.json();
-        if (abbrData.results && abbrData.results.length > 0) {
-          // 按缩写分组，每个缩写只取最高相似度的
-          const abbrGroups: { [key: string]: { content: string; similarity: number } } = {};
-          abbrData.results.forEach((result: { content: string; similarity: number }) => {
-            // 动态匹配缩写前缀，支持多语言
-            const abbrMatch = result.content.match(new RegExp(`${texts.abbreviationPrefix}:\\s*([^|]+)`));
-            if (abbrMatch) {
-              const abbr = abbrMatch[1].trim();
-              if (!abbrGroups[abbr] || result.similarity > abbrGroups[abbr].similarity) {
-                abbrGroups[abbr] = result;
+        if (vectorError) {
+          console.error('获取缩写向量失败:', vectorError);
+        } else if (vectors && vectors.length > 0) {
+          // 计算相似度并找到匹配项
+          const results = [];
+          for (const vector of vectors) {
+            try {
+              let embedding: number[];
+              
+              if (typeof vector.embedding === 'string') {
+                try {
+                  embedding = JSON.parse(vector.embedding);
+                } catch {
+                  continue;
+                }
+              } else if (Array.isArray(vector.embedding)) {
+                embedding = vector.embedding;
+              } else {
+                continue;
               }
-            }
-          });
 
-          foundAbbreviations = Object.values(abbrGroups);
-          if (foundAbbreviations.length > 0) {
-            abbreviationContext = texts.abbreviationContext + foundAbbreviations.map(a => a.content).join('\n');
+              if (!Array.isArray(embedding) || embedding.length !== queryEmbedding.length) {
+                continue;
+              }
+
+              const similarity = cosineSimilarity(queryEmbedding, embedding);
+              
+              if (similarity >= knowledgeConfig.abbreviation_recognition.similarity_threshold) {
+                // 获取缩写的详细信息
+                const { data: abbr, error: abbrError } = await supabase
+                  .from('knowledge_abbreviations')
+                  .select('abbreviation, full_form, description, category')
+                  .eq('id', vector.document_id)
+                  .single();
+                  
+                if (abbrError) {
+                  console.error(`获取缩写数据失败 ${vector.document_id}:`, abbrError);
+                  continue;
+                }
+                
+                if (abbr) {
+                  const content = `${texts.abbreviationPrefix}: ${abbr.abbreviation} | ${texts.fullFormPrefix}: ${abbr.full_form}${abbr.description ? ` | ${texts.descriptionPrefix}: ${abbr.description}` : ''}`;
+                  results.push({
+                    content: content,
+                    similarity: similarity,
+                    abbreviation: abbr.abbreviation
+                  });
+                }
+              }
+            } catch (err) {
+              console.error(`处理缩写向量 ${vector.document_id} 时出错:`, err);
+              continue;
+            }
+          }
+
+          // 按缩写分组，每个缩写只取最高相似度的
+          if (results.length > 0) {
+            const abbrGroups: { [key: string]: { content: string; similarity: number } } = {};
+            results.forEach(result => {
+              const abbr = result.abbreviation;
+              if (!abbrGroups[abbr] || result.similarity > abbrGroups[abbr].similarity) {
+                abbrGroups[abbr] = { content: result.content, similarity: result.similarity };
+              }
+            });
+
+            foundAbbreviations = Object.values(abbrGroups)
+              .sort((a, b) => b.similarity - a.similarity)
+              .slice(0, knowledgeConfig.abbreviation_recognition.limit);
+              
+            if (foundAbbreviations.length > 0) {
+              abbreviationContext = texts.abbreviationContext + foundAbbreviations.map(a => a.content).join('\n');
+            }
           }
         }
-      } else {
-        console.error(`缩写检索失败: ${abbreviationResponse.status}`);
       }
     } catch (error) {
       console.error('缩写检索失败:', error);
