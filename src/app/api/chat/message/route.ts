@@ -363,6 +363,29 @@ export async function PUT(request: NextRequest) {
     // 验证语言参数
     const selectedLanguage = (language === 'vi') ? 'vi' : 'zh';
     const texts = LANGUAGE_TEXTS[selectedLanguage];
+    
+    // 获取未处理的用户消息
+    const { data: pendingMessages, error: messagesError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', session_id)
+      .eq('role', 'user')
+      .eq('is_processed', false)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) {
+      console.error('Messages error:', messagesError);
+      return NextResponse.json({ error: messagesError.message }, { status: 500 });
+    }
+
+    if (!pendingMessages || pendingMessages.length === 0) {
+      return NextResponse.json({ message: '没有待处理的消息' });
+    }
+
+    // 合并用户消息
+    const mergedContent = pendingMessages
+      .map(msg => msg.content)
+      .join('\n\n');
 
     // 获取会话信息
     const { data: session, error: sessionError } = await supabase
@@ -391,29 +414,6 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 获取未处理的用户消息
-    const { data: pendingMessages, error: messagesError } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('session_id', session_id)
-      .eq('role', 'user')
-      .eq('is_processed', false)
-      .order('created_at', { ascending: true });
-
-    if (messagesError) {
-      console.error('Messages error:', messagesError);
-      return NextResponse.json({ error: messagesError.message }, { status: 500 });
-    }
-
-    if (!pendingMessages || pendingMessages.length === 0) {
-      return NextResponse.json({ message: '没有待处理的消息' });
-    }
-
-    // 合并用户消息
-    const mergedContent = pendingMessages
-      .map(msg => msg.content)
-      .join('\n\n');
-
     // **获取选择的prompt内容**
     const promptResponse = await fetch(`${getBaseUrl()}/api/prompts/${prompt_id}`);
     let systemPrompt = texts.defaultSystemPrompt;
@@ -427,8 +427,14 @@ export async function PUT(request: NextRequest) {
         } else if (promptData.prompt.prompt_cn) {
           // 如果没有对应语言的prompt，回退到中文
           systemPrompt = promptData.prompt.prompt_cn;
+        } else {
+          console.warn(`Prompt数据中没有找到${promptField}或prompt_cn字段`);
         }
+      } else {
+        console.warn(`Prompt响应中没有prompt字段`);
       }
+    } else {
+      console.error(`获取Prompt失败: ${promptResponse.status}`);
     }
 
     // **1. 人设向量检索**
@@ -449,9 +455,10 @@ export async function PUT(request: NextRequest) {
         const personalityData = await personalityResponse.json();
         if (personalityData.results && personalityData.results.length > 0) {
           const bestMatch = personalityData.results[0];
-          console.log(`人设匹配度: ${bestMatch.similarity.toFixed(3)}`);
           personalityContext = texts.personalityContext(bestMatch.similarity) + bestMatch.content;
         }
+      } else {
+        console.error(`人设检索失败: ${personalityResponse.status}`);
       }
     } catch (error) {
       console.error('人设检索失败:', error);
@@ -494,6 +501,8 @@ export async function PUT(request: NextRequest) {
             abbreviationContext = texts.abbreviationContext + foundAbbreviations.map(a => a.content).join('\n');
           }
         }
+      } else {
+        console.error(`缩写检索失败: ${abbreviationResponse.status}`);
       }
     } catch (error) {
       console.error('缩写检索失败:', error);
@@ -512,8 +521,6 @@ export async function PUT(request: NextRequest) {
       );
 
       if (searchResponse.results && searchResponse.results.length > 0) {
-        console.log(`向量检索找到 ${searchResponse.results.length} 条相关内容`);
-        
         // 检查是否有高相似度的话术匹配
         const veryHighSimilarityScripts = searchResponse.results.filter(
           (result: KnowledgeSearchResult) => result.type === 'script' && result.similarity >= knowledgeConfig.script_library.force_use_threshold  // 使用配置
@@ -531,27 +538,30 @@ export async function PUT(request: NextRequest) {
                             texts.highSimilarityEnd;
         } else {
           // 如果没有高相似度匹配，提供参考信息
-          const knowledgeItems = searchResponse.results.slice(0, 3).map((result: KnowledgeSearchResult) => {
-            if (result.type === 'script') {
-              // 对于话术，提取用户问题和回答
-              const userMatch = result.content.match(new RegExp(`${texts.userPrefix}:\\s*([^|]+)`));
-              const answerMatch = result.content.match(new RegExp(`${texts.answerPrefix}:\\s*(.+)$`));
-              if (userMatch && answerMatch) {
-                return `${texts.similarQuestion}："${userMatch[1].trim()}" → ${texts.suggestedAnswer}："${answerMatch[1].trim()}"`;
+          const knowledgeItems = searchResponse.results
+            .filter((result: KnowledgeSearchResult) => result.type !== 'abbreviation') // 排除缩写类型，避免重复
+            .slice(0, 3)
+            .map((result: KnowledgeSearchResult) => {
+              if (result.type === 'script') {
+                // 对于话术，提取用户问题和回答
+                const userMatch = result.content.match(new RegExp(`${texts.userPrefix}:\\s*([^|]+)`));
+                const answerMatch = result.content.match(new RegExp(`${texts.answerPrefix}:\\s*(.+)$`));
+                if (userMatch && answerMatch) {
+                  return `${texts.similarQuestion}："${userMatch[1].trim()}" → ${texts.suggestedAnswer}："${answerMatch[1].trim()}"`;
+                }
               }
-            } else if (result.type === 'abbreviation') {
-              return `${texts.relatedInfo}：${result.content}`;
-            }
-            return result.content;
-          }).join('\n');
+              return result.content;
+            })
+            .filter(item => item) // 过滤掉空值
+            .join('\n');
 
-          knowledgeContext = texts.knowledgeReference + knowledgeItems + texts.knowledgeInstruction;
+          if (knowledgeItems.trim()) {
+            knowledgeContext = texts.knowledgeReference + knowledgeItems + texts.knowledgeInstruction;
+          }
         }
-      } else {
-        console.log('向量检索未找到相关内容');
       }
     } catch (searchError) {
-      console.error('向量检索出错:', searchError);
+      console.error('话术库检索失败:', searchError);
       // 向量检索失败不应影响正常对话，继续处理
     }
 
@@ -580,7 +590,7 @@ export async function PUT(request: NextRequest) {
 
     // **构建最终的系统Prompt**
     const finalSystemPrompt = systemPrompt + personalityContext + abbreviationContext + knowledgeContext;
-
+    
     // 调用LLM生成回复
     const llmResponse = await llmService.chatWithHistory([
       { role: 'system', content: finalSystemPrompt },
@@ -678,8 +688,6 @@ export async function PUT(request: NextRequest) {
     // **自动触发聊天向量化（不阻塞响应）**
     setImmediate(async () => {
       try {
-        console.log(`开始自动向量化 session: ${session_id}, AI消息: ${aiMessage.id}`);
-        
         // 等待一小段时间确保数据库触发器已执行
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -695,8 +703,6 @@ export async function PUT(request: NextRequest) {
         }
         
         if (!vectorCheck || vectorCheck.length === 0) {
-          console.warn(`AI消息 ${aiMessage.id} 没有创建向量记录，可能数据库触发器未工作`);
-          
           // 手动调用批量向量化作为备用方案
           const batchResponse = await fetch(`${getBaseUrl()}/api/chat/vectors/batch`, {
             method: 'POST',
@@ -709,14 +715,12 @@ export async function PUT(request: NextRequest) {
           
           if (batchResponse.ok) {
             const batchResult = await batchResponse.json();
-            console.log('备用批量向量化完成:', batchResult.message);
+            console.log('备用向量化完成:', batchResult.message);
           } else {
-            console.error('备用批量向量化失败:', await batchResponse.text());
+            console.error('备用向量化失败:', await batchResponse.text());
           }
           return;
         }
-        
-        console.log(`找到 ${vectorCheck.length} 个向量记录:`, vectorCheck.map(v => v.vector_type));
         
         // 为新创建的向量生成embedding
         const vectorizeResponse = await fetch(`${getBaseUrl()}/api/chat/vectors`, {
@@ -730,16 +734,14 @@ export async function PUT(request: NextRequest) {
 
         if (vectorizeResponse.ok) {
           const result = await vectorizeResponse.json();
-          console.log('自动向量化成功:', result.message);
           if (result.updated_count > 0) {
-            console.log(`为 ${result.updated_count} 个向量生成了embedding`);
+            console.log(`向量化完成: ${result.updated_count} 个向量`);
           }
         } else {
-          const errorText = await vectorizeResponse.text();
-          console.error('自动向量化失败:', errorText);
+          console.error('向量化失败:', await vectorizeResponse.text());
         }
       } catch (vectorizeError) {
-        console.error('自动向量化调用失败:', vectorizeError);
+        console.error('向量化调用失败:', vectorizeError);
       }
     });
 
