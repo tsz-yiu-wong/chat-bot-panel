@@ -1,356 +1,8 @@
--- 机器人人设向量化数据库Schema
--- 独立的人设向量管理系统
+-- 机器人人设向量化更新脚本
+-- 用于更新现有数据库，添加完整字段支持
 
--- ===== 基础扩展 =====
--- 启用 pgvector 扩展
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ===== 机器人向量表 =====
-CREATE TABLE bot_vectors (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  bot_id UUID NOT NULL REFERENCES bot_personalities(id) ON DELETE CASCADE,
-  vector_type VARCHAR(30) NOT NULL,
-  content TEXT NOT NULL,
-  embedding vector(1536),
-  metadata JSONB NOT NULL DEFAULT '{}',
-  search_weight FLOAT DEFAULT 1.0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  is_deleted BOOLEAN DEFAULT FALSE,
-  
-  CONSTRAINT valid_bot_vector_type CHECK (
-    vector_type IN ('basic_info', 'personality', 'experiences', 'preferences', 'comprehensive', 'dreams')
-  )
-);
-
--- ===== 索引 =====
-CREATE INDEX bot_vectors_bot_id_idx ON bot_vectors(bot_id);
-CREATE INDEX bot_vectors_type_idx ON bot_vectors(vector_type);
-CREATE INDEX bot_vectors_weight_idx ON bot_vectors(search_weight DESC);
-CREATE INDEX bot_vectors_active_idx ON bot_vectors(is_deleted) WHERE is_deleted = FALSE;
-
--- 向量搜索索引
-CREATE INDEX bot_vectors_embedding_idx 
-ON bot_vectors USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
-WHERE is_deleted = FALSE;
-
--- ===== 向量化函数 =====
-CREATE OR REPLACE FUNCTION create_bot_personality_vectors(
-  p_bot_id UUID,
-  p_bot_name TEXT DEFAULT '',
-  p_nationality TEXT DEFAULT '',
-  p_age INTEGER DEFAULT NULL,
-  p_gender TEXT DEFAULT '',
-  p_current_job TEXT DEFAULT '',
-  p_values TEXT DEFAULT '',
-  p_life_philosophy TEXT DEFAULT '',
-  p_worldview TEXT DEFAULT '',
-  p_hobbies TEXT DEFAULT '',
-  p_childhood_experience TEXT DEFAULT '',
-  p_work_experience TEXT DEFAULT '',
-  p_relationship_experience TEXT DEFAULT '',
-  p_business_experience TEXT DEFAULT '',
-  p_investment_experience TEXT DEFAULT '',
-  p_favorite_music TEXT DEFAULT '',
-  p_favorite_movies TEXT DEFAULT '',
-  p_favorite_food TEXT DEFAULT '',
-  p_favorite_fashion TEXT DEFAULT '',
-  p_life_dreams TEXT DEFAULT '',
-  p_future_thoughts TEXT DEFAULT '',
-  p_places_to_visit TEXT DEFAULT '',
-  preserve_created_at TIMESTAMPTZ DEFAULT NULL
-)
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  base_metadata JSONB;
-  insert_created_at TIMESTAMPTZ;
-BEGIN
-  -- 基础元数据
-  base_metadata := jsonb_build_object(
-    'bot_name', COALESCE(p_bot_name, ''),
-    'nationality', COALESCE(p_nationality, ''),
-    'age', COALESCE(p_age, 0),
-    'gender', COALESCE(p_gender, ''),
-    'current_job', COALESCE(p_current_job, '')
-  );
-
-  -- 决定使用的created_at时间戳
-  insert_created_at := COALESCE(preserve_created_at, NOW());
-
-  -- 删除旧的向量记录
-  DELETE FROM bot_vectors WHERE bot_id = p_bot_id;
-
-  -- 1. 基础信息向量
-  INSERT INTO bot_vectors (bot_id, vector_type, content, metadata, search_weight, created_at, updated_at)
-  VALUES (
-    p_bot_id, 'basic_info',
-    CONCAT(
-      '姓名：', COALESCE(p_bot_name, ''), 
-      ' 年龄：', COALESCE(p_age::text, ''), 
-      ' 性别：', COALESCE(p_gender, ''),
-      ' 国籍：', COALESCE(p_nationality, ''),
-      ' 职业：', COALESCE(p_current_job, '')
-    ),
-    base_metadata || jsonb_build_object('search_purpose', 'basic_identity'),
-    2.0,
-    insert_created_at,
-    NOW()
-  );
-
-  -- 2. 性格特征向量
-  INSERT INTO bot_vectors (bot_id, vector_type, content, metadata, search_weight, created_at, updated_at)
-  VALUES (
-    p_bot_id, 'personality',
-    CONCAT(
-      '价值观：', COALESCE(p_values, ''),
-      ' 人生哲学：', COALESCE(p_life_philosophy, ''),
-      ' 世界观：', COALESCE(p_worldview, ''),
-      ' 兴趣爱好：', COALESCE(p_hobbies, '')
-    ),
-    base_metadata || jsonb_build_object('search_purpose', 'personality_traits'),
-    1.8,
-    insert_created_at,
-    NOW()
-  );
-
-  -- 3. 人生经历向量
-  INSERT INTO bot_vectors (bot_id, vector_type, content, metadata, search_weight, created_at, updated_at)
-  VALUES (
-    p_bot_id, 'experiences',
-    CONCAT(
-      '童年经历：', COALESCE(p_childhood_experience, ''),
-      ' 工作经历：', COALESCE(p_work_experience, ''),
-      ' 感情经历：', COALESCE(p_relationship_experience, ''),
-      ' 商业经历：', COALESCE(p_business_experience, ''),
-      ' 投资经历：', COALESCE(p_investment_experience, '')
-    ),
-    base_metadata || jsonb_build_object('search_purpose', 'life_experiences'),
-    1.6,
-    insert_created_at,
-    NOW()
-  );
-
-  -- 4. 生活偏好向量
-  INSERT INTO bot_vectors (bot_id, vector_type, content, metadata, search_weight, created_at, updated_at)
-  VALUES (
-    p_bot_id, 'preferences',
-    CONCAT(
-      '喜欢的音乐：', COALESCE(p_favorite_music, ''),
-      ' 喜欢的电影：', COALESCE(p_favorite_movies, ''),
-      ' 喜欢的美食：', COALESCE(p_favorite_food, ''),
-      ' 喜欢的时尚：', COALESCE(p_favorite_fashion, '')
-    ),
-    base_metadata || jsonb_build_object('search_purpose', 'lifestyle_preferences'),
-    1.4,
-    insert_created_at,
-    NOW()
-  );
-
-  -- 5. 综合向量（包含所有信息）
-  INSERT INTO bot_vectors (bot_id, vector_type, content, metadata, search_weight, created_at, updated_at)
-  VALUES (
-    p_bot_id, 'comprehensive',
-    CONCAT(
-      '机器人：', COALESCE(p_bot_name, ''),
-      ' 基本信息：年龄', COALESCE(p_age::text, ''), '岁，', COALESCE(p_gender, ''), '，', COALESCE(p_nationality, ''), '人，职业是', COALESCE(p_current_job, ''),
-      ' 性格特征：', COALESCE(p_values, ''), ' ', COALESCE(p_life_philosophy, ''), ' ', COALESCE(p_worldview, ''),
-      ' 兴趣爱好：', COALESCE(p_hobbies, ''),
-      ' 人生经历：', COALESCE(p_childhood_experience, ''), ' ', COALESCE(p_work_experience, ''),
-      ' 生活偏好：喜欢', COALESCE(p_favorite_music, ''), '音乐，', COALESCE(p_favorite_movies, ''), '电影，', COALESCE(p_favorite_food, ''), '美食',
-      ' 未来梦想：', COALESCE(p_life_dreams, ''), ' ', COALESCE(p_future_thoughts, ''), ' ', COALESCE(p_places_to_visit, '')
-    ),
-    base_metadata || jsonb_build_object('search_purpose', 'comprehensive_profile'),
-    2.2,
-    insert_created_at,
-    NOW()
-  );
-END;
-$$;
-
--- ===== 自动向量化触发器 =====
-CREATE OR REPLACE FUNCTION auto_vectorize_bot_personality()
-RETURNS TRIGGER AS $$
-DECLARE
-  original_created_at TIMESTAMPTZ;
-BEGIN
-  IF TG_OP = 'UPDATE' THEN
-    -- 在删除前，先获取最早的 created_at 时间戳
-    SELECT MIN(created_at) INTO original_created_at
-    FROM bot_vectors 
-    WHERE bot_id = OLD.id;
-    
-    -- 删除旧的向量记录
-    DELETE FROM bot_vectors WHERE bot_id = OLD.id;
-  END IF;
-
-  IF NOT NEW.is_deleted THEN
-    -- 创建新的向量记录，如果是UPDATE操作则保留原始created_at
-    PERFORM create_bot_personality_vectors(
-      NEW.id,
-      NEW.bot_name,
-      NEW.nationality,
-      NEW.age,
-      NEW.gender,
-      NEW.current_job,
-      NEW.values,
-      NEW.life_philosophy,
-      NEW.worldview,
-      NEW.hobbies,
-      NEW.childhood_experience,
-      NEW.work_experience,
-      NEW.relationship_experience,
-      NEW.business_experience,
-      NEW.investment_experience,
-      NEW.favorite_music,
-      NEW.favorite_movies,
-      NEW.favorite_food,
-      NEW.favorite_fashion,
-      NEW.life_dreams,
-      NEW.future_thoughts,
-      NEW.places_to_visit,
-      CASE WHEN TG_OP = 'UPDATE' THEN original_created_at ELSE NULL END
-    );
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE 'plpgsql';
-
--- 创建触发器
-CREATE TRIGGER auto_vectorize_bot_personality_trigger
-  AFTER INSERT OR UPDATE ON bot_personalities
-  FOR EACH ROW EXECUTE FUNCTION auto_vectorize_bot_personality();
-
--- ===== 搜索函数 =====
--- 基于向量搜索相似人设
-CREATE OR REPLACE FUNCTION search_similar_bot_personalities(
-  query_embedding vector(1536),
-  match_count INTEGER DEFAULT 5,
-  similarity_threshold FLOAT DEFAULT 0.7,
-  vector_type_filter TEXT DEFAULT NULL,
-  exclude_bot_id UUID DEFAULT NULL
-)
-RETURNS TABLE (
-  bot_id UUID,
-  bot_name TEXT,
-  vector_type TEXT,
-  content TEXT,
-  similarity FLOAT,
-  search_weight FLOAT,
-  metadata JSONB
-)
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT
-    bv.bot_id,
-    (bv.metadata->>'bot_name')::TEXT as bot_name,
-    bv.vector_type,
-    bv.content,
-    (1 - (bv.embedding <=> query_embedding)) * bv.search_weight AS weighted_similarity,
-    bv.search_weight,
-    bv.metadata
-  FROM bot_vectors bv
-  WHERE 
-    bv.is_deleted = FALSE
-    AND (vector_type_filter IS NULL OR bv.vector_type = vector_type_filter)
-    AND (exclude_bot_id IS NULL OR bv.bot_id != exclude_bot_id)
-    AND (1 - (bv.embedding <=> query_embedding)) * bv.search_weight > similarity_threshold
-  ORDER BY weighted_similarity DESC
-  LIMIT match_count;
-$$;
-
--- 获取机器人的所有向量
-CREATE OR REPLACE FUNCTION get_bot_personality_vectors(p_bot_id UUID)
-RETURNS TABLE (
-  id UUID,
-  vector_type TEXT,
-  content TEXT,
-  embedding vector(1536),
-  metadata JSONB,
-  search_weight FLOAT,
-  created_at TIMESTAMPTZ
-)
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT 
-    id,
-    vector_type,
-    content,
-    embedding,
-    metadata,
-    search_weight,
-    created_at
-  FROM bot_vectors
-  WHERE bot_id = p_bot_id AND is_deleted = FALSE
-  ORDER BY search_weight DESC, created_at ASC;
-$$;
-
--- ===== 数据初始化函数 =====
--- 批量向量化现有机器人人设
-CREATE OR REPLACE FUNCTION vectorize_existing_bot_personalities()
-RETURNS TABLE (
-  processed_count INTEGER,
-  total_count INTEGER
-)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  processed INTEGER := 0;
-  total INTEGER := 0;
-  bot_record RECORD;
-BEGIN
-  -- 统计总数
-  SELECT COUNT(*) INTO total FROM bot_personalities WHERE is_deleted = FALSE;
-  
-  -- 处理每个机器人人设
-  FOR bot_record IN 
-    SELECT * FROM bot_personalities WHERE is_deleted = FALSE
-  LOOP
-    -- 调用向量化函数
-    PERFORM create_bot_personality_vectors(
-      bot_record.id,
-      bot_record.bot_name,
-      bot_record.nationality,
-      bot_record.age,
-      bot_record.gender,
-      bot_record.current_job,
-      bot_record.values,
-      bot_record.life_philosophy,
-      bot_record.worldview,
-      bot_record.hobbies,
-      bot_record.childhood_experience,
-      bot_record.work_experience,
-      bot_record.relationship_experience,
-      bot_record.business_experience,
-      bot_record.investment_experience,
-      bot_record.favorite_music,
-      bot_record.favorite_movies,
-      bot_record.favorite_food,
-      bot_record.favorite_fashion,
-      bot_record.life_dreams,
-      bot_record.future_thoughts,
-      bot_record.places_to_visit,
-      bot_record.created_at
-    );
-    
-    processed := processed + 1;
-  END LOOP;
-  
-  RETURN QUERY SELECT processed, total;
-END;
-$$;
-
--- ===== 更新时间触发器 =====
-CREATE TRIGGER update_bot_vectors_updated_at 
-    BEFORE UPDATE ON bot_vectors 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ===== 支持多语言的向量化函数 =====
+-- ===== 更新向量化函数 =====
+-- 支持多语言和完整字段的向量化函数
 CREATE OR REPLACE FUNCTION create_bot_personality_vectors_with_language(
   p_bot_id UUID,
   p_bot_name TEXT DEFAULT '',
@@ -361,7 +13,7 @@ CREATE OR REPLACE FUNCTION create_bot_personality_vectors_with_language(
   p_weight TEXT DEFAULT '',
   p_blood_type TEXT DEFAULT '',
   p_zodiac_sign TEXT DEFAULT '',
-  p_birth_date TEXT DEFAULT '',
+  p_birth_date DATE DEFAULT NULL,
   p_birth_place TEXT DEFAULT '',
   p_education_level TEXT DEFAULT '',
   p_graduate_school TEXT DEFAULT '',
@@ -570,7 +222,7 @@ BEGIN
       CASE WHEN COALESCE(p_weight, '') != '' THEN CONCAT(label_weight, '：', p_weight, '。') END,
       CASE WHEN COALESCE(p_blood_type, '') != '' THEN CONCAT(label_blood_type, '：', p_blood_type, '。') END,
       CASE WHEN COALESCE(p_zodiac_sign, '') != '' THEN CONCAT(label_zodiac, '：', p_zodiac_sign, '。') END,
-      CASE WHEN COALESCE(p_birth_date, '') != '' THEN CONCAT(label_birth_date, '：', p_birth_date, '。') END,
+      CASE WHEN p_birth_date IS NOT NULL THEN CONCAT(label_birth_date, '：', p_birth_date::text, '。') END,
       CASE WHEN COALESCE(p_birth_place, '') != '' THEN CONCAT(label_birth_place, '：', p_birth_place, '。') END,
       CASE WHEN COALESCE(p_education_level, '') != '' THEN CONCAT(label_education_level, '：', p_education_level, '。') END,
       CASE WHEN COALESCE(p_graduate_school, '') != '' THEN CONCAT(label_graduate_school, '：', p_graduate_school, '。') END,
@@ -809,4 +461,85 @@ BEGIN
 END;
 $$;
 
-COMMIT; 
+-- ===== 更新触发器函数（如果需要） =====
+-- 更新自动向量化触发器，使用新的函数
+DROP TRIGGER IF EXISTS auto_vectorize_bot_personality_trigger ON bot_personalities;
+
+CREATE OR REPLACE FUNCTION auto_vectorize_bot_personality()
+RETURNS TRIGGER AS $$
+DECLARE
+  original_created_at TIMESTAMPTZ;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    -- 在删除前，先获取最早的 created_at 时间戳
+    SELECT MIN(created_at) INTO original_created_at
+    FROM bot_vectors 
+    WHERE bot_id = OLD.id;
+    
+    -- 删除旧的向量记录
+    DELETE FROM bot_vectors WHERE bot_id = OLD.id;
+  END IF;
+
+  IF NOT NEW.is_deleted THEN
+    -- 使用新的向量化函数
+    PERFORM create_bot_personality_vectors_with_language(
+      NEW.id,
+      NEW.bot_name,
+      NEW.nationality,
+      NEW.age,
+      NEW.gender,
+      NEW.height,
+      NEW.weight,
+      NEW.blood_type,
+      NEW.zodiac_sign,
+      NEW.birth_date,
+      NEW.birth_place,
+      NEW.education_level,
+      NEW.graduate_school,
+      NEW.major,
+      NEW.current_address,
+      NEW.current_job,
+      NEW.work_address,
+      NEW.daily_routine,
+      NEW.favorite_music,
+      NEW.favorite_movies,
+      NEW.favorite_fashion,
+      NEW.favorite_hairstyle,
+      NEW.favorite_food,
+      NEW.favorite_restaurants,
+      NEW.hobbies,
+      NEW.worldview,
+      NEW.life_philosophy,
+      NEW.values,
+      NEW.life_timeline,
+      NEW.family_members,
+      NEW.childhood_experience,
+      NEW.childhood_stories,
+      NEW.growth_experience,
+      NEW.relationship_experience,
+      NEW.marital_status,
+      NEW.marriage_history,
+      NEW.work_experience,
+      NEW.business_experience,
+      NEW.investment_experience,
+      NEW.places_to_visit,
+      NEW.life_dreams,
+      NEW.future_thoughts,
+      'zh'
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- 重新创建触发器
+CREATE TRIGGER auto_vectorize_bot_personality_trigger
+  AFTER INSERT OR UPDATE ON bot_personalities
+  FOR EACH ROW EXECUTE FUNCTION auto_vectorize_bot_personality();
+
+-- 完成提示
+-- 运行完成后，建议执行以下操作：
+-- 1. 运行 node scripts/test-db-function.js 验证函数更新
+-- 2. 运行 node scripts/vectorize-all-bots.js --force 重新向量化所有机器人
+-- 3. 在页面上测试向量搜索功能 

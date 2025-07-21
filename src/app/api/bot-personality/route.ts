@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { BotPersonality } from '@/lib/types/bot-personality';
+import OpenAI from 'openai';
+
+// 初始化OpenAI客户端
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+});
 
 // 创建Supabase客户端
 function createSupabaseServer() {
@@ -29,30 +35,136 @@ function createSupabaseServer() {
 // 临时用户ID（RLS禁用期间使用）
 const TEMP_USER_ID = '00000000-0000-0000-0000-000000000000';
 
+// 生成Embedding向量
+async function generateEmbedding(content: string): Promise<number[]> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OpenAI API key not configured, skipping embedding generation');
+      return [];
+    }
+    if (!content || content.trim() === '') {
+      return [];
+    }
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: content,
+    });
+    return response.data[0].embedding;
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    return [];
+  }
+}
+
+// 异步生成并更新Embeddings
+async function generateAndUpdateEmbeddings(botId: string) {
+  try {
+    const supabase = createSupabaseServer();
+    console.log(`[Embedding] 开始为机器人 ${botId} 异步生成embedding...`);
+    
+    const { data: vectors, error: fetchError } = await supabase
+      .from('bot_vectors')
+      .select('id, content')
+      .eq('bot_id', botId)
+      .eq('is_deleted', false);
+
+    if (fetchError) {
+      console.error(`[Embedding] 获取机器人 ${botId} 的向量记录失败:`, fetchError);
+      return;
+    }
+
+    if (!vectors || vectors.length === 0) {
+      console.log(`[Embedding] 机器人 ${botId} 没有需要处理的向量。`);
+      return;
+    }
+
+    let updatedCount = 0;
+    for (const vector of vectors) {
+      const embedding = await generateEmbedding(vector.content);
+      if (embedding.length > 0) {
+        const { error: updateError } = await supabase
+          .from('bot_vectors')
+          .update({ embedding: `[${embedding.join(',')}]` })
+          .eq('id', vector.id);
+        
+        if (updateError) {
+          console.error(`[Embedding] 更新向量 ${vector.id} 失败:`, updateError);
+        } else {
+          updatedCount++;
+        }
+      }
+      // 添加小延迟避免API限流
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`✅ [Embedding] 机器人 ${botId} 的 ${updatedCount}/${vectors.length} 个 embedding 已异步更新。`);
+  } catch (error) {
+    console.error(`🔴 [Embedding] 机器人 ${botId} 的异步更新 embedding 过程失败:`, error);
+  }
+}
+
 // 调用向量化API
 async function updatePersonalityVectors(botId: string, personalityData: BotPersonality, language?: string) {
   try {
-    // 内部API调用向量化服务
-    const vectorizeResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/bot-personality/vectorize`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        botId,
-        personalityData,
-        language
-      })
+    // 直接调用数据库函数，避免内部API调用
+    const supabase = createSupabaseServer();
+    
+    const { error: functionError } = await supabase.rpc('create_bot_personality_vectors_with_language', {
+      p_bot_id: botId,
+      p_bot_name: personalityData.bot_name || '',
+      p_nationality: personalityData.nationality || '',
+      p_age: personalityData.age || null,
+      p_gender: personalityData.gender || '',
+      p_height: personalityData.height || '',
+      p_weight: personalityData.weight || '',
+      p_blood_type: personalityData.blood_type || '',
+      p_zodiac_sign: personalityData.zodiac_sign || '',
+      p_birth_date: personalityData.birth_date || '',
+      p_birth_place: personalityData.birth_place || '',
+      p_education_level: personalityData.education_level || '',
+      p_graduate_school: personalityData.graduate_school || '',
+      p_major: personalityData.major || '',
+      p_current_address: personalityData.current_address || '',
+      p_current_job: personalityData.current_job || '',
+      p_work_address: personalityData.work_address || '',
+      p_daily_routine: personalityData.daily_routine || null,
+      p_favorite_music: personalityData.favorite_music || '',
+      p_favorite_movies: personalityData.favorite_movies || '',
+      p_favorite_fashion: personalityData.favorite_fashion || '',
+      p_favorite_hairstyle: personalityData.favorite_hairstyle || '',
+      p_favorite_food: personalityData.favorite_food || '',
+      p_favorite_restaurants: personalityData.favorite_restaurants || '',
+      p_hobbies: personalityData.hobbies || '',
+      p_worldview: personalityData.worldview || '',
+      p_life_philosophy: personalityData.life_philosophy || '',
+      p_values: personalityData.values || '',
+      p_life_timeline: personalityData.life_timeline || null,
+      p_family_members: personalityData.family_members || null,
+      p_childhood_experience: personalityData.childhood_experience || '',
+      p_childhood_stories: personalityData.childhood_stories || '',
+      p_growth_experience: personalityData.growth_experience || '',
+      p_relationship_experience: personalityData.relationship_experience || '',
+      p_marital_status: personalityData.marital_status || '',
+      p_marriage_history: personalityData.marriage_history || '',
+      p_work_experience: personalityData.work_experience || '',
+      p_business_experience: personalityData.business_experience || '',
+      p_investment_experience: personalityData.investment_experience || '',
+      p_places_to_visit: personalityData.places_to_visit || '',
+      p_life_dreams: personalityData.life_dreams || '',
+      p_future_thoughts: personalityData.future_thoughts || '',
+      p_language: language || 'zh'
     });
 
-    if (!vectorizeResponse.ok) {
-      console.warn('向量化失败，但不影响主要操作:', await vectorizeResponse.text());
+    if (functionError) {
+      console.error('🔴 数据库向量化失败:', functionError);
+      console.error('🔴 错误详情:', JSON.stringify(functionError, null, 2));
+      console.error('🔴 可能需要运行数据库更新脚本: database/bot_personality_vectors_update.sql');
     } else {
-      const result = await vectorizeResponse.json();
-      console.log('向量化成功:', result.message);
+      console.log('✅ 向量化成功: 直接调用数据库函数');
     }
   } catch (error) {
-    console.warn('向量化调用失败，但不影响主要操作:', error);
+    console.error('🔴 向量化调用失败:', error);
+    console.error('🔴 建议检查数据库函数是否存在');
   }
 }
 
@@ -129,8 +241,9 @@ export async function POST(request: NextRequest) {
 
     // 异步进行向量化（不阻塞响应），传递语言参数
     if (personality?.id) {
-      setImmediate(() => {
-        updatePersonalityVectors(personality.id, personality, language || 'zh');
+      setImmediate(async () => {
+        await updatePersonalityVectors(personality.id, personality, language || 'zh');
+        await generateAndUpdateEmbeddings(personality.id);
       });
     }
 
@@ -171,8 +284,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // 异步进行向量化更新（不阻塞响应），传递语言参数
-    setImmediate(() => {
-      updatePersonalityVectors(id, personality, language || 'zh');
+    setImmediate(async () => {
+      await updatePersonalityVectors(id, personality, language || 'zh');
+      await generateAndUpdateEmbeddings(id);
     });
 
     return NextResponse.json({ personality });
