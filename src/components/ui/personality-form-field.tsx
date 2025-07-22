@@ -112,14 +112,14 @@ export default function PersonalityFormField({
                 type="number"
                 value={event.year}
                 onChange={(e) => updateEvent(index, 'year', parseInt(e.target.value))}
-                placeholder="年份"
+                placeholder={getLabel('year', language)}
                 className="w-20 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
               />
               <input
                 type="number"
                 value={event.month || ''}
                 onChange={(e) => updateEvent(index, 'month', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="月份(可选)"
+                placeholder={getLabel('month_optional', language)}
                 min="1"
                 max="12"
                 className="w-24 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
@@ -128,7 +128,7 @@ export default function PersonalityFormField({
                 type="text"
                 value={event.event}
                 onChange={(e) => updateEvent(index, 'event', e.target.value)}
-                placeholder="事件描述（一行过）"
+                placeholder={getLabel('event_description', language)}
                 className="flex-1 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
               />
               <button
@@ -136,7 +136,7 @@ export default function PersonalityFormField({
                 onClick={() => removeEvent(index)}
                 className="px-2 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-sm transition-colors"
               >
-                删除
+                {getLabel('delete', language)}
               </button>
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function PersonalityFormField({
           onClick={addEvent}
           className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-gray-50 dark:bg-[var(--accent-background)] hover:bg-blue-50 dark:hover:bg-blue-900/20"
         >
-          + {getLabel('add', language)} 人生事件
+          + {getLabel('add', language)} {getLabel('life_event', language)}
         </button>
       </div>
     )
@@ -185,21 +185,21 @@ export default function PersonalityFormField({
                 type="text"
                 value={member.relationship || ''}
                 onChange={(e) => updateMember(index, 'relationship', e.target.value)}
-                placeholder="关系"
+                placeholder={getLabel('relationship', language)}
                 className="w-28 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
               />
               <input
                 type="text"
                 value={member.name || ''}
                 onChange={(e) => updateMember(index, 'name', e.target.value)}
-                placeholder="名字"
+                placeholder={getLabel('name', language)}
                 className="w-28 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
               />
               <input
                 type="text"
                 value={member.description || ''}
                 onChange={(e) => updateMember(index, 'description', e.target.value)}
-                placeholder="描述"
+                placeholder={getLabel('description', language)}
                 className="flex-1 px-2 py-1 border border-gray-200 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--component-background)] text-gray-900 dark:text-gray-100"
               />
               <button
@@ -207,7 +207,7 @@ export default function PersonalityFormField({
                 onClick={() => removeMember(index)}
                 className="px-2 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-sm transition-colors"
               >
-                删除
+                {getLabel('delete', language)}
               </button>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function PersonalityFormField({
           onClick={addMember}
           className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-gray-50 dark:bg-[var(--accent-background)] hover:bg-blue-50 dark:hover:bg-blue-900/20"
         >
-          + {getLabel('add', language)} 家庭成员
+          + {getLabel('add', language)} {getLabel('family_member', language)}
         </button>
       </div>
     )

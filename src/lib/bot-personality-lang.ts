@@ -219,6 +219,34 @@ export const BOT_PERSONALITY_LABELS: Record<string, FieldLabels> = {
   future_thoughts: {
     zh: '对未来人生的想法',
     vi: 'Suy nghĩ về cuộc sống tương lai'
+  },
+
+  // Timeline specific
+  year: {
+    zh: '年份',
+    vi: 'Năm'
+  },
+  month_optional: {
+    zh: '月份(可选)',
+    vi: 'Tháng (tùy chọn)'
+  },
+  event_description: {
+    zh: '事件描述',
+    vi: 'Mô tả sự kiện'
+  },
+  
+  // Family specific
+  relationship: {
+    zh: '关系',
+    vi: 'Mối quan hệ'
+  },
+  name: {
+    zh: '名字',
+    vi: 'Tên'
+  },
+  description: {
+    zh: '描述',
+    vi: 'Mô tả'
   }
 };
 
@@ -323,6 +351,14 @@ export const COMMON_LABELS: Record<string, FieldLabels> = {
   select: {
     zh: '选择',
     vi: 'Chọn'
+  },
+  life_event: {
+    zh: '人生事件',
+    vi: 'Sự kiện cuộc đời'
+  },
+  family_member: {
+    zh: '家庭成员',
+    vi: 'Thành viên gia đình'
   }
 };
 

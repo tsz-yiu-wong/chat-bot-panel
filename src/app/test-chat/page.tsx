@@ -318,16 +318,21 @@ export default function TestChatPage() {
     setIsCreatingUser(true);
     try {
       addLog('正在创建用户...');
-      // 生成唯一的用户名，使用时间戳确保唯一性
-      const timestamp = Date.now();
-      const uniqueUsername = `test_user_${timestamp}`;
-      const uniqueDisplayName = `测试用户${users.length + 1}`;
+      // 生成唯一的用户名
+      const userNumbers = users.map(u => {
+        const match = u.username.match(/^user(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+      const maxUserNumber = Math.max(0, ...userNumbers);
+      const nextUserNumber = maxUserNumber + 1;
+      const newUsername = `user${nextUserNumber}`;
+      const newDisplayName = `user${nextUserNumber}`;
       
       const { data: user, error } = await supabase
         .from('chat_users')
         .insert([{ 
-          username: uniqueUsername, 
-          display_name: uniqueDisplayName 
+          username: newUsername, 
+          display_name: newDisplayName 
         }])
         .select()
         .single();
@@ -355,15 +360,20 @@ export default function TestChatPage() {
     setIsCreatingSession(true);
     try {
       addLog('正在创建会话...');
-      // 生成唯一的会话名，使用时间戳确保唯一性
-      const timestamp = Date.now();
-      const uniqueSessionName = `测试会话${sessions.length + 1}_${timestamp}`;
+      // 生成唯一的会话名
+      const sessionNumbers = sessions.map(s => {
+        const match = s.session_name.match(/^chat(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+      const maxSessionNumber = Math.max(0, ...sessionNumbers);
+      const nextSessionNumber = maxSessionNumber + 1;
+      const newSessionName = `chat${nextSessionNumber}`;
       
       const { data: session, error } = await supabase
         .from('chat_sessions')
         .insert([{ 
           user_id: selectedUser, 
-          session_name: uniqueSessionName, 
+          session_name: newSessionName, 
           message_merge_seconds: mergeSeconds, 
           topic_trigger_hours: topicHours 
         }])
