@@ -4,6 +4,24 @@ import { llmService } from '@/lib/llm-service';
 import crypto from 'crypto';
 import { KnowledgeSearchResult, KnowledgeSearchResponse, SessionMetadata } from '@/lib/types/knowledge';
 import { getKnowledgeRetrievalConfig, getChatProcessingConfig } from '@/lib/config/ai-config';
+import { formatFullChatResponse } from '@/lib/text-formatter';
+
+// AI 消息结果类型定义
+interface AiMessageResult {
+  data: {
+    id: string;
+    session_id: string;
+    content: string;
+    role: string;
+    created_at: string;
+  } | null;
+  error: {
+    message: string;
+    details?: string;
+    hint?: string;
+    code?: string;
+  } | null;
+}
 
 // 动态获取基础URL的辅助函数
 function getBaseUrl() {
@@ -17,12 +35,12 @@ function getBaseUrl() {
 // 双语文本配置
 const LANGUAGE_TEXTS = {
   zh: {
-    personalityContext: (similarity: number) => `\n\n根据人设信息 (相似度: ${similarity.toFixed(3)}):\n`,
-    abbreviationContext: '\n\n识别到的缩写:\n',
-    highSimilarityScript: (similarity: number) => `\n\n这是标准话术场景 (相似度${similarity.toFixed(3)})，必须严格参考以下标准回答：\n"`,
+    personalityContext: (similarity: number) => `\n\n# 根据人设信息 (相似度: ${similarity.toFixed(3)}):\n`,
+    abbreviationContext: '\n\n# 识别到的缩写:\n',
+    highSimilarityScript: (similarity: number) => `\n\n# 这是标准话术场景 (相似度${similarity.toFixed(3)})，必须严格参考以下标准回答：\n"`,
     highSimilarityEnd: '"\n不要额外添加解释、分析或内容。',
-    knowledgeReference: '\n\n参考相关信息：\n',
-    knowledgeInstruction: '\n\n请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。',
+    knowledgeReference: '\n\n# 参考相关信息：\n',
+    knowledgeInstruction: '\n\n**请参考以上信息回答用户问题。如果有相似的问题和回答，可以参考其风格和内容。**',
     similarQuestion: '相似问题',
     suggestedAnswer: '建议回答',
     relatedInfo: '相关信息',
@@ -35,12 +53,12 @@ const LANGUAGE_TEXTS = {
     answerPrefix: '回答'
   },
   vi: {
-    personalityContext: (similarity: number) => `\n\nDựa trên thông tin nhân vật (độ tương tự: ${similarity.toFixed(3)}):\n`,
-    abbreviationContext: '\n\nCác từ viết tắt được nhận dạng:\n',
+    personalityContext: (similarity: number) => `\n\n# Dựa trên thông tin nhân vật (độ tương tự: ${similarity.toFixed(3)}):\n`,
+    abbreviationContext: '\n\n# Các từ viết tắt được nhận dạng:\n',
     highSimilarityScript: (similarity: number) => `\n\nĐây là kịch bản chuẩn (độ tương tự ${similarity.toFixed(3)}), phải tham khảo nghiêm ngặt câu trả lời chuẩn sau:\n"`,
     highSimilarityEnd: '"\nKhông được thêm giải thích, phân tích hoặc nội dung bổ sung.',
-    knowledgeReference: '\n\nTham khảo thông tin liên quan:\n',
-    knowledgeInstruction: '\n\nVui lòng tham khảo thông tin trên để trả lời câu hỏi của người dùng. Nếu có câu hỏi và câu trả lời tương tự, có thể tham khảo phong cách và nội dung của chúng.',
+    knowledgeReference: '\n\n# Tham khảo thông tin liên quan:\n',
+    knowledgeInstruction: '\n\n**Vui lòng tham khảo thông tin trên để trả lời câu hỏi của người dùng. Nếu có câu hỏi và câu trả lời tương tự, có thể tham khảo phong cách và nội dung của chúng.**',
     similarQuestion: 'Câu hỏi tương tự',
     suggestedAnswer: 'Câu trả lời đề xuất',
     relatedInfo: 'Thông tin liên quan',
@@ -714,44 +732,138 @@ export async function PUT(request: NextRequest) {
       });
     }
 
+    // **文本格式化处理** - 格式化AI回复内容
+    finalContent = formatFullChatResponse(finalContent);
+
     // 生成合并组ID
     const mergeGroupId = crypto.randomUUID();
 
-    // 存储AI回复
-    const { data: aiMessage, error: aiMessageError } = await supabase
-      .from('chat_messages')
-      .insert({
-        session_id,
-        user_id: null,
-        role: 'assistant',
-        content: finalContent,
-        is_processed: true,
-        merge_group_id: mergeGroupId,
-        metadata: {
-          llm_model: llmResponse.model,
-          llm_usage: llmResponse.usage,
-          merged_messages_count: pendingMessages.length,
-          processed_at: new Date().toISOString(),
-          knowledge_search_threshold: knowledgeConfig.script_library.similarity_threshold,
-          knowledge_context_length: knowledgeContext.length,
-          knowledge_results_count: searchResponse?.results?.length || 0,
-          knowledge_max_similarity: searchResponse?.results?.length > 0 ? 
-            Math.max(...searchResponse.results.map((r: KnowledgeSearchResult) => r.similarity)) : 0,
-          personality_similarity: personalityContext ? 
-            (personalityContext.match(/相似度:\s*([\d.]+)/) ? parseFloat(personalityContext.match(/相似度:\s*([\d.]+)/)![1]) : 0) : 0,
-          abbreviations_found: foundAbbreviations.length,
-          history_limit: history_limit,
-          prompt_id: prompt_id,
-          personality_id: personality_id,
-          language: selectedLanguage
-        } as SessionMetadata
-      })
-      .select()
-      .single();
+    // **拆分消息** - 将多行内容拆分成多条独立消息
+    const messageLines = finalContent
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.length > 0); // 过滤空行
 
-    if (aiMessageError) {
-      console.error('AI message error:', aiMessageError);
-      return NextResponse.json({ error: aiMessageError.message }, { status: 500 });
+    const aiMessages: AiMessageResult[] = [];
+    const aiMessageErrors: string[] = [];
+
+    // 为第一行创建立即发送的消息，其余消息延迟发送
+    if (messageLines.length > 0) {
+      const firstLine = messageLines[0];
+      
+      try {
+        const { data: firstMessage, error: firstMessageError } = await supabase
+          .from('chat_messages')
+          .insert({
+            session_id,
+            user_id: null,
+            role: 'assistant',
+            content: firstLine,
+            is_processed: true,
+            merge_group_id: mergeGroupId,
+            metadata: {
+              llm_model: llmResponse.model,
+              llm_usage: llmResponse.usage, // 只在第一条消息中记录用量
+              merged_messages_count: pendingMessages.length,
+              processed_at: new Date().toISOString(),
+              knowledge_search_threshold: knowledgeConfig.script_library.similarity_threshold,
+              knowledge_context_length: knowledgeContext.length,
+              knowledge_results_count: searchResponse?.results?.length || 0,
+              knowledge_max_similarity: searchResponse?.results?.length > 0 ? 
+                Math.max(...searchResponse.results.map((r: KnowledgeSearchResult) => r.similarity)) : 0,
+              personality_similarity: personalityContext ? 
+                (personalityContext.match(/相似度:\s*([\d.]+)/) ? parseFloat(personalityContext.match(/相似度:\s*([\d.]+)/)![1]) : 0) : 0,
+              abbreviations_found: foundAbbreviations.length,
+              history_limit: history_limit,
+              prompt_id: prompt_id,
+              personality_id: personality_id,
+              language: selectedLanguage,
+              message_order: 1, // 第一条消息
+              total_messages_in_group: messageLines.length,
+              is_first_in_group: true,
+              is_last_in_group: messageLines.length === 1
+            } as SessionMetadata
+          })
+          .select()
+          .single();
+
+        if (firstMessageError) {
+          aiMessageErrors.push(`第一条消息存储失败: ${firstMessageError.message}`);
+        } else {
+          aiMessages.push({ data: firstMessage, error: null });
+        }
+      } catch (error) {
+        aiMessageErrors.push(`第一条消息创建失败: ${error}`);
+      }
+
+      // 如果有多条消息，异步发送剩余消息
+      if (messageLines.length > 1) {
+        // 不阻塞响应，异步处理剩余消息
+        setImmediate(async () => {
+          for (let i = 1; i < messageLines.length; i++) {
+            try {
+              // 等待10秒
+              await new Promise(resolve => setTimeout(resolve, 10000));
+              
+              const line = messageLines[i];
+              const messageOrder = i + 1;
+              
+              const { error: delayedMessageError } = await supabase
+                .from('chat_messages')
+                .insert({
+                  session_id,
+                  user_id: null,
+                  role: 'assistant',
+                  content: line,
+                  is_processed: true,
+                  merge_group_id: mergeGroupId,
+                  metadata: {
+                    llm_model: llmResponse.model,
+                    merged_messages_count: pendingMessages.length,
+                    processed_at: new Date().toISOString(),
+                    knowledge_search_threshold: knowledgeConfig.script_library.similarity_threshold,
+                    knowledge_context_length: knowledgeContext.length,
+                    knowledge_results_count: searchResponse?.results?.length || 0,
+                    knowledge_max_similarity: searchResponse?.results?.length > 0 ? 
+                      Math.max(...searchResponse.results.map((r: KnowledgeSearchResult) => r.similarity)) : 0,
+                    personality_similarity: personalityContext ? 
+                      (personalityContext.match(/相似度:\s*([\d.]+)/) ? parseFloat(personalityContext.match(/相似度:\s*([\d.]+)/)![1]) : 0) : 0,
+                    abbreviations_found: foundAbbreviations.length,
+                    history_limit: history_limit,
+                    prompt_id: prompt_id,
+                    personality_id: personality_id,
+                    language: selectedLanguage,
+                    message_order: messageOrder,
+                    total_messages_in_group: messageLines.length,
+                    is_first_in_group: false,
+                    is_last_in_group: i === messageLines.length - 1
+                  } as SessionMetadata
+                })
+                .select()
+                .single();
+
+              if (delayedMessageError) {
+                console.error(`延迟消息 ${messageOrder} 存储失败:`, delayedMessageError);
+              } else {
+                console.log(`延迟消息 ${messageOrder} 发送成功: ${line.substring(0, 20)}...`);
+              }
+            } catch (error) {
+              console.error(`延迟消息 ${i + 1} 创建失败:`, error);
+            }
+          }
+          console.log(`所有延迟消息发送完成，共 ${messageLines.length} 条消息`);
+        });
+      }
+    }
+
+    // 检查是否有消息创建失败
+    if (aiMessages.length === 0) {
+      console.error('所有AI消息创建失败:', aiMessageErrors);
+      return NextResponse.json({ error: '所有AI消息创建失败' }, { status: 500 });
+    }
+
+    if (aiMessageErrors.length > 0) {
+      console.warn('部分AI消息创建失败:', aiMessageErrors);
     }
 
     // 标记用户消息为已处理
@@ -788,25 +900,30 @@ export async function PUT(request: NextRequest) {
         // 等待一小段时间确保数据库触发器已执行
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // 检查是否创建了向量记录
+        // 检查是否为所有消息创建了向量记录
+        const messageIds = aiMessages.filter(msg => msg.data).map(msg => msg.data!.id);
         const { data: vectorCheck, error: checkError } = await supabase
           .from('chat_message_vectors')
-          .select('id, vector_type')
-          .eq('message_id', aiMessage.id);
+          .select('id, vector_type, message_id')
+          .in('message_id', messageIds);
           
         if (checkError) {
           console.error('检查向量记录失败:', checkError);
           return;
         }
         
-        if (!vectorCheck || vectorCheck.length === 0) {
+        const vectorizedMessageIds = new Set(vectorCheck?.map(v => v.message_id) || []);
+        const missingVectorCount = messageIds.length - vectorizedMessageIds.size;
+        
+        if (missingVectorCount > 0) {
+          console.log(`需要为 ${missingVectorCount} 条消息创建向量记录`);
           // 手动调用批量向量化作为备用方案
           const batchResponse = await fetch(`${getBaseUrl()}/api/chat/vectors/batch`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               session_id: session_id,
-              limit: 1
+              limit: messageIds.length
             })
           });
           
@@ -825,7 +942,7 @@ export async function PUT(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             session_id: session_id,
-            batch_size: 5  // 限制批量大小，确保及时处理
+            batch_size: Math.max(5, messageIds.length)  // 确保能处理所有新消息
           })
         });
 
@@ -844,11 +961,18 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: '消息处理完成',
-      aiMessage,
+      message: messageLines.length > 1 ? 
+        `第一条消息已发送，剩余 ${messageLines.length - 1} 条消息将每隔10秒发送` : 
+        '消息处理完成',
+      aiMessages, // 返回立即发送的消息
+      aiMessage: aiMessages[0], // 保持向后兼容性
       processedCount: pendingMessages.length,
       mergeGroupId,
-      knowledgeUsed: knowledgeContext.length > 0
+      knowledgeUsed: knowledgeContext.length > 0,
+      totalMessagesCount: messageLines.length, // 总消息数量
+      immediateMessagesCount: aiMessages.length, // 立即发送的消息数量
+      delayedMessagesCount: messageLines.length - aiMessages.length, // 延迟发送的消息数量
+      errors: aiMessageErrors.length > 0 ? aiMessageErrors : undefined // 新增：错误信息
     });
 
   } catch (error) {

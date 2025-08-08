@@ -318,8 +318,18 @@ export default function TestChatPage() {
     setIsCreatingUser(true);
     try {
       addLog('正在创建用户...');
+      
+      // 为了确保用户名的唯一性，需要从数据库获取所有用户（包括软删除的）
+      const { data: allUsers, error: fetchAllUsersError } = await supabase
+        .from('chat_users')
+        .select('username');
+
+      if (fetchAllUsersError) {
+        throw new Error('无法获取全部用户列表以确保唯一性: ' + fetchAllUsersError.message);
+      }
+      
       // 生成唯一的用户名
-      const userNumbers = users.map(u => {
+      const userNumbers = (allUsers || []).map(u => {
         const match = u.username.match(/^user(\d+)$/);
         return match ? parseInt(match[1], 10) : 0;
       });
@@ -328,17 +338,23 @@ export default function TestChatPage() {
       const newUsername = `user${nextUserNumber}`;
       const newDisplayName = `user${nextUserNumber}`;
       
-      const { data: user, error } = await supabase
-        .from('chat_users')
-        .insert([{ 
-          username: newUsername, 
-          display_name: newDisplayName 
-        }])
-        .select()
-        .single();
+      const response = await fetch('/api/chat/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: newUsername,
+          display_name: newDisplayName,
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '创建用户失败');
+      }
       
+      const { user } = result;
+
       addLog(`用户创建成功: ${user.display_name}`);
       // 重新加载用户列表
       await loadUsers();
@@ -347,8 +363,9 @@ export default function TestChatPage() {
         setSelectedUser(user.id);
         addLog(`已自动选择用户: ${user.display_name}`);
       }
-    } catch (error) { 
-      addLog(`创建用户失败: ${error}`, true); 
+    } catch (error: unknown) { 
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      addLog(`创建用户失败: ${errorMessage}`, true); 
     } finally {
       setIsCreatingUser(false);
     }
