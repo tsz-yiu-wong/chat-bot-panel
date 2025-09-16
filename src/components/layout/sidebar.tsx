@@ -48,7 +48,7 @@ export function Sidebar() {
   // };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-40 flex-col border-r bg-background sm:flex">
+    <aside className="fixed inset-y-0 left-0 z-10 hidden w-40 flex-col border-r bg-card sm:flex">
       <nav className="flex flex-col gap-2 p-4">
         <div className="mb-4 flex items-center gap-3 px-2">
           <Bot className="h-8 w-8 text-primary" />
