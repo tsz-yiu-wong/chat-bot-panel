@@ -1,5 +1,5 @@
 import ComingSoon from '@/components/coming-soon';
 
-export default function UIPage() {
+export default function DashboardPage() {
   return <ComingSoon />;
 }

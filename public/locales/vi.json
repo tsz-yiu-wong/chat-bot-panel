@@ -1,0 +1,20 @@
+{
+  "sidebar": {
+    "dashboard": "Bảng điều khiển",
+    "characters": "Nhân vật",
+    "prompts": "Gợi ý",
+    "knowledge": "Kiến thức",
+    "topics": "Chủ đề",
+    "users": "Người dùng",
+    "test_chat": "Thử nghiệm trò chuyện",
+    "ui_components": "UI"
+  },
+  "languages": {
+    "zh": "中文",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "user_menu": {
+    "username_placeholder": "[Username]"
+  }
+}

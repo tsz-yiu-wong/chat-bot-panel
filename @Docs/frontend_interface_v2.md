@@ -9,7 +9,7 @@
 ---
 
 ## 1. 角色人设 (Characters)
-- **位置**: `src/app/bots/page.tsx`
+- **位置**: `src/app/characters/page.tsx`
 - **核心功能**:
   - 列表加载、选择、创建、编辑、软删除角色。
   - 角色图片管理。

@@ -1,0 +1,20 @@
+{
+  "sidebar": {
+    "dashboard": "仪表盘",
+    "characters": "人设",
+    "prompts": "提示词",
+    "knowledge": "知识库",
+    "topics": "话题库",
+    "users": "用户管理",
+    "test_chat": "聊天测试",
+    "ui_components": "UI"
+  },
+  "languages": {
+    "zh": "中文",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "user_menu": {
+    "username_placeholder": "[用户名]"
+  }
+}

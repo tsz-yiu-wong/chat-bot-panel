@@ -1,0 +1,20 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "characters": "Characters",
+    "prompts": "Prompts",
+    "knowledge": "Knowledge",
+    "topics": "Topics",
+    "users": "Users",
+    "test_chat": "Test Chat",
+    "ui_components": "UI"
+  },
+  "languages": {
+    "zh": "中文",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "user_menu": {
+    "username_placeholder": "[Username]"
+  }
+}
