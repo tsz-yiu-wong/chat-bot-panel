@@ -7,7 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import I18nProvider from '@/components/i18n-provider';
 import { AppShell } from '@/components/layout/app-shell';
 import { UserProvider } from '@/components/user-context';
-import { type UserRole } from '@/lib/permissions';
+import { getCurrentUser, type UserProfile } from '@/lib/auth';
+import { handleError } from '@/lib/error-handler';
 
 const inter = Inter({ 
   subsets: ["latin"], 
@@ -21,31 +22,14 @@ export const metadata: Metadata = {
   description: "新一代聊天机器人后台管理系统",
 };
 
-interface UserProfile {
-  username: string;
-  email: string;
-  full_name: string | null;
-  role: UserRole;
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = await headers();
-  const userProfileString = headersList.get('x-user-profile');
   
-  let userProfile: UserProfile | null = null;
-  if (userProfileString) {
-    try {
-      userProfile = JSON.parse(userProfileString);
-    } catch (e) {
-      console.error("Failed to parse user profile from header", e);
-    }
-  }
-
-  const userRole: UserRole | null = userProfile?.role || null;
+  const userProfile = await getCurrentUser();
+  const userRole = userProfile?.role || null;
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>

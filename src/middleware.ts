@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { hasPagePermission, getDefaultPage, type UserRole } from "@/lib/permissions";
+import { handleError } from "@/lib/error-handler";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -53,7 +54,7 @@ export async function middleware(request: NextRequest) {
       const { data: profileData, error } = await supabase.rpc('get_my_profile');
 
       if (error || !profileData || profileData.length === 0) {
-        console.error('在中间件中获取用户信息失败:', error);
+        handleError(error || new Error("Failed to get user profile in middleware"), { path: request.nextUrl.pathname });
         // 如果获取失败，允许访问但后续页面将按未登录用户处理
         return response;
       }
@@ -71,19 +72,12 @@ export async function middleware(request: NextRequest) {
         const defaultPage = getDefaultPage(userRole);
         return NextResponse.redirect(new URL(defaultPage, request.url));
       }
-
-      // 2. 将用户信息注入到请求头中，供服务器组件使用
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('x-user-profile', JSON.stringify(userProfile));
-
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
+      
+      // 2. 无需再向请求头注入用户信息，Server Component 会自行获取
+      return response;
 
     } catch (error) {
-      console.error('中间件权限检查错误:', error);
+      handleError(error, { context: 'Middleware permission check' });
       return response;
     }
   }
