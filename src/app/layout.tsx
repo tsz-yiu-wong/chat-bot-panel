@@ -1,23 +1,52 @@
+import { headers } from 'next/headers';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import I18nProvider from '@/components/i18n-provider';
-import Sidebar from '@/components/layout/sidebar-dynamic';
+import { AppShell } from '@/components/layout/app-shell';
+import { UserProvider } from '@/components/user-context';
+import { type UserRole } from '@/lib/permissions';
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-sans",
+  display: 'swap', // 优化字体加载，防止布局偏移
+  preload: true, // 预加载字体
+});
 
 export const metadata: Metadata = {
   title: "聊天机器人管理面板",
   description: "新一代聊天机器人后台管理系统",
 };
 
-export default function RootLayout({
+interface UserProfile {
+  username: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const userProfileString = headersList.get('x-user-profile');
+  
+  let userProfile: UserProfile | null = null;
+  if (userProfileString) {
+    try {
+      userProfile = JSON.parse(userProfileString);
+    } catch (e) {
+      console.error("Failed to parse user profile from header", e);
+    }
+  }
+
+  const userRole: UserRole | null = userProfile?.role || null;
+
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
@@ -33,12 +62,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="relative flex min-h-screen flex-col">
-              <Sidebar />
-              <div className="flex flex-col sm:pl-46">
-                <main className="flex-1 p-6">{children}</main>
+            <UserProvider initialRole={userRole} initialProfile={userProfile}>
+              <div className="relative flex min-h-screen flex-col">
+                <AppShell>{children}</AppShell>
               </div>
-            </div>
+            </UserProvider>
           </ThemeProvider>
         </I18nProvider>
       </body>

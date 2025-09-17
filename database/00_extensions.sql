@@ -19,3 +19,6 @@ $$;
 -- 3. For new databases, create the extension in the correct schema if it doesn't exist at all.
 -- This command will not fail if the extension already exists (e.g., after being moved by the block above).
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
+
+-- 4. Enable pgcrypto for password hashing functions (e.g., crypt, gen_salt)
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;

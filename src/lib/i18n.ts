@@ -2,23 +2,27 @@
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import HttpApi from 'i18next-http-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
+
+// 预加载语言资源，避免异步加载延迟
+import zhResources from '../../public/locales/zh.json';
+import enResources from '../../public/locales/en.json';
+import viResources from '../../public/locales/vi.json';
 
 i18n
   .use(initReactI18next)
   .use(LanguageDetector)
-  .use(HttpApi)
   .init({
-    // lng: 'zh', // 如果未检测到语言，则默认使用此语言
-    fallbackLng: 'en', // 如果当前语言的翻译缺失，则使用此语言
+    fallbackLng: 'zh', // 设置中文为默认语言
     supportedLngs: ['en', 'zh', 'vi'],
-    // debug: true, // 在开发环境中开启debug模式
     interpolation: {
       escapeValue: false, // react已经处理了XSS
     },
-    backend: {
-      loadPath: '/locales/{{lng}}.json',
+    // 直接使用预加载的资源，避免网络请求
+    resources: {
+      zh: { common: zhResources },
+      en: { common: enResources },
+      vi: { common: viResources },
     },
     detection: {
       order: ['localStorage', 'navigator'],

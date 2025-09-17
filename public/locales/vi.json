@@ -1,11 +1,11 @@
 {
   "sidebar": {
     "dashboard": "Bảng điều khiển",
+    "users": "Người dùng",
     "characters": "Nhân vật",
     "prompts": "Gợi ý",
     "knowledge": "Kiến thức",
     "topics": "Chủ đề",
-    "users": "Người dùng",
     "test_chat": "Kiểm tra",
     "ui_components": "UI",
     "permission": "Quyền hạn",
@@ -17,6 +17,16 @@
     "vi": "Tiếng Việt"
   },
   "user_menu": {
-    "username_placeholder": "[Username]"
+    "username_placeholder": "[Username]",
+    "roles": {
+      "user": "Người dùng",
+      "admin": "Quản trị viên",
+      "super_admin": "Quản trị viên cấp cao"
+    },
+    "unknown_user": "Người dùng không xác định",
+    "user_info": "Thông tin người dùng",
+    "username": "Tên người dùng:",
+    "role": "Vai trò:",
+    "logout": "Đăng xuất"
   }
 }

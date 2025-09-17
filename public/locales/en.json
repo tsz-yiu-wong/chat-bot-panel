@@ -1,11 +1,11 @@
 {
   "sidebar": {
     "dashboard": "Dashboard",
+    "users": "Users",
     "characters": "Characters",
     "prompts": "Prompts",
     "knowledge": "Knowledge",
     "topics": "Topics",
-    "users": "Users",
     "test_chat": "Testing",
     "ui_components": "UI",
     "permission": "Permission",
@@ -17,6 +17,16 @@
     "vi": "Tiếng Việt"
   },
   "user_menu": {
-    "username_placeholder": "[Username]"
+    "username_placeholder": "[Username]",
+    "roles": {
+      "user": "User",
+      "admin": "Admin",
+      "super_admin": "Super Admin"
+    },
+    "unknown_user": "Unknown User",
+    "user_info": "User Information",
+    "username": "Username:",
+    "role": "Role:",
+    "logout": "Logout"
   }
 }

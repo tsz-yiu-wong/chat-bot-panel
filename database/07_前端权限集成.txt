@@ -1,7 +1,0 @@
-
-第四步：前端权限集成
-登录后，前端请求 profiles 表获取当前用户的 role。
-根据 role 动态渲染 UI，例如：
-if (role === 'super_admin') { // 显示 Dashboard 菜单 }
-if (role === 'super_admin') { // 显示删除按钮 }
-这个方案将数据库安全和前端用户体验清晰地分离开来，并且结构简单，便于您未来扩展和修改。

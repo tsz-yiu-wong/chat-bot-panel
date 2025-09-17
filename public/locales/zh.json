@@ -1,11 +1,11 @@
 {
   "sidebar": {
     "dashboard": "仪表盘",
+    "users": "用户管理",
     "characters": "人设",
     "prompts": "提示词",
     "knowledge": "知识库",
     "topics": "话题库",
-    "users": "用户管理",
     "test_chat": "聊天测试",
     "ui_components": "UI",
     "permission": "权限管理",
@@ -17,6 +17,16 @@
     "vi": "Tiếng Việt"
   },
   "user_menu": {
-    "username_placeholder": "[用户名]"
+    "username_placeholder": "[用户名]",
+    "roles": {
+      "user": "用户",
+      "admin": "管理员",
+      "super_admin": "超级管理员"
+    },
+    "unknown_user": "未知用户",
+    "user_info": "用户信息",
+    "username": "用户名:",
+    "role": "权限组:",
+    "logout": "登出"
   }
 }

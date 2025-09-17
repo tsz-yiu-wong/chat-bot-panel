@@ -23,6 +23,7 @@ END$$;
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.users (
     id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    username TEXT UNIQUE NOT NULL, -- Added for username-based login
     role user_role NOT NULL DEFAULT 'user',
     -- Add other user-specific fields here, e.g., full_name
     full_name TEXT,
@@ -50,8 +51,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-    INSERT INTO public.users (id)
-    VALUES (NEW.id);
+    -- Use email as the initial unique username. It can be updated later.
+    INSERT INTO public.users (id, username)
+    VALUES (NEW.id, NEW.email);
     RETURN NEW;
 END;
 $$;
@@ -79,6 +81,76 @@ DECLARE
 BEGIN
     SELECT role INTO user_role_result FROM public.users WHERE id = auth.uid();
     RETURN user_role_result;
+END;
+$$;
+
+-- Function to get the current user's complete profile information
+CREATE OR REPLACE FUNCTION public.get_my_profile()
+RETURNS TABLE (
+    username TEXT,
+    email TEXT,
+    full_name TEXT,
+    role user_role
+)
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u_public.username,
+        u_auth.email::TEXT,
+        u_public.full_name,
+        u_public.role
+    FROM public.users AS u_public
+    JOIN auth.users AS u_auth ON u_public.id = u_auth.id
+    WHERE u_public.id = auth.uid();
+END;
+$$;
+
+
+-- =================================================================
+-- 4.1. Helper function to get email from username
+-- Used for username/password login flow.
+-- =================================================================
+CREATE OR REPLACE FUNCTION public.get_email_by_username(p_username TEXT)
+RETURNS TABLE (email character varying)
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT u_auth.email
+  FROM auth.users AS u_auth
+  JOIN public.users AS u_public ON u_auth.id = u_public.id
+  WHERE u_public.username = p_username;
+END;
+$$;
+
+
+-- =================================================================
+-- 4.3. Helper function to update a user's password (for admins)
+-- =================================================================
+CREATE OR REPLACE FUNCTION public.update_user_password(
+    p_username TEXT,
+    p_new_password TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public, extensions
+AS $$
+DECLARE
+    v_user_id uuid;
+BEGIN
+    -- Find the user_id from the username
+    SELECT id INTO v_user_id FROM public.users WHERE username = p_username;
+
+    -- If user is found, update the password in auth.users
+    IF v_user_id IS NOT NULL THEN
+        UPDATE auth.users
+        SET encrypted_password = crypt(p_new_password, gen_salt('bf'))
+        WHERE id = v_user_id;
+    END IF;
 END;
 $$;
 
