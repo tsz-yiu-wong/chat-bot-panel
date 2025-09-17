@@ -6,8 +6,10 @@
     "knowledge": "Knowledge",
     "topics": "Topics",
     "users": "Users",
-    "test_chat": "Test Chat",
-    "ui_components": "UI"
+    "test_chat": "Testing",
+    "ui_components": "UI",
+    "permission": "Permission",
+    "settings": "Settings"
   },
   "languages": {
     "zh": "中文",

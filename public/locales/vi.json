@@ -6,8 +6,10 @@
     "knowledge": "Kiến thức",
     "topics": "Chủ đề",
     "users": "Người dùng",
-    "test_chat": "Thử nghiệm trò chuyện",
-    "ui_components": "UI"
+    "test_chat": "Kiểm tra",
+    "ui_components": "UI",
+    "permission": "Quyền hạn",
+    "settings": "Cài đặt"
   },
   "languages": {
     "zh": "中文",

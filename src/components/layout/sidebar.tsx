@@ -5,25 +5,20 @@ import { usePathname } from 'next/navigation';
 import {
   Bot,
   Gauge,
-  HardDrive,
-  MessageSquareQuote,
-  Settings,
-  ShieldQuestion,
-  BookUser,
-  FileText,
   Users,
+  MessageSquareQuote,
+  BookOpen,
+  FileText,
+  FlaskConical,
+  LayoutDashboard,
+  ShieldQuestion,
+  Settings,
   LogOut,
   Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { LanguageToggle } from './language-toggle';
 import { useTranslation } from 'react-i18next';
 
 // TODO: Integrate user and permission logic
@@ -33,22 +28,20 @@ import { useTranslation } from 'react-i18next';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { t, i18n } = useTranslation();
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
+  const { t } = useTranslation();
 
   const navItems = [
     { href: '/dashboard', icon: Gauge, label: t('sidebar.dashboard') },
+    { href: '/users', icon: Users, label: t('sidebar.users') },
     { href: '/characters', icon: Bot, label: t('sidebar.characters') },
     { href: '/prompts', icon: MessageSquareQuote, label: t('sidebar.prompts') },
-    { href: '/knowledge', icon: FileText, label: t('sidebar.knowledge') },
-    { href: '/topics', icon: BookUser, label: t('sidebar.topics') },
-    { href: '/users', icon: Users, label: t('sidebar.users') },
-    { href: '/test-chat', icon: ShieldQuestion, label: t('sidebar.test_chat') },
+    { href: '/knowledge', icon: BookOpen, label: t('sidebar.knowledge') },
+    { href: '/topics', icon: FileText, label: t('sidebar.topics') },
+    { href: '/test-chat', icon: FlaskConical, label: t('sidebar.test_chat') },
     // Add the new UI showcase page for development
-    { href: '/ui', icon: HardDrive, label: t('sidebar.ui_components') },
+    { href: '/ui', icon: LayoutDashboard, label: t('sidebar.ui_components') },
+    { href: '/permission', icon: ShieldQuestion, label: t('sidebar.permission') },
+    { href: '/settings', icon: Settings, label: t('sidebar.settings') },
   ];
   // const user: AdminUser | null = { role: 'super_admin' }; // Placeholder for user data
 
@@ -61,7 +54,7 @@ export function Sidebar() {
   // };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-44 flex-col border-r bg-card sm:flex">
+    <aside className="fixed inset-y-0 left-0 z-10 hidden w-46 flex-col border-r bg-card sm:flex">
       <nav className="flex flex-col gap-2 p-4">
         <div className="mb-2 flex justify-center">
           <Bot className="h-12 w-12 text-primary" />
@@ -96,33 +89,7 @@ export function Sidebar() {
           <span className="text-sm font-medium text-muted-foreground">
             {t('user_menu.username_placeholder')}
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Globe className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => changeLanguage('zh')}>
-                <span role="img" aria-label="China">
-                  🇨🇳
-                </span>
-                <span className="ml-2">{t('languages.zh')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLanguage('en')}>
-                <span role="img" aria-label="United States">
-                  🇺🇸
-                </span>
-                <span className="ml-2">{t('languages.en')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLanguage('vi')}>
-                <span role="img" aria-label="Vietnam">
-                  🇻🇳
-                </span>
-                <span className="ml-2">{t('languages.vi')}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LanguageToggle />
         </div>
       </div>
     </aside>

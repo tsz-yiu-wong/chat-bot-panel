@@ -7,7 +7,9 @@
     "topics": "话题库",
     "users": "用户管理",
     "test_chat": "聊天测试",
-    "ui_components": "UI"
+    "ui_components": "UI",
+    "permission": "权限管理",
+    "settings": "设置"
   },
   "languages": {
     "zh": "中文",

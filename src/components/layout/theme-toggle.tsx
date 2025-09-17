@@ -6,14 +6,11 @@ import { useTheme } from 'next-themes';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useMounted } from '@/hooks/use-mounted';
 
 export function ThemeToggle() {
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = useMounted();
   const { theme, setTheme } = useTheme();
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     //
