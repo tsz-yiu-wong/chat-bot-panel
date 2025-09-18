@@ -9,8 +9,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const showSidebar = !pathname.startsWith('/login');
 
   if (!showSidebar) {
-    // For pages without sidebar, like login page
-    return <main className="p-6">{children}</main>;
+    // 对于登录页面等无侧边栏的页面，直接返回 children 不添加额外的容器和内边距
+    return <>{children}</>;
   }
 
   return (

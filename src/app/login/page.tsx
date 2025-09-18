@@ -56,7 +56,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <main className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <div className="flex flex-col items-center space-y-6 w-full max-w-md px-4">
         <BotIcon />
         <Card className="w-full p-4">
@@ -64,7 +64,7 @@ export default function LoginPage() {
             <div className="space-y-2 mb-8">
               <Label htmlFor="username">用户名</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="username"
                   type="text"
@@ -72,14 +72,14 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="pl-10"
+                  className="pl-10 mt-3 h-11"
                 />
               </div>
             </div>
             <div className="space-y-2 mb-8">
               <Label htmlFor="password">密码</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -87,7 +87,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pl-10 pr-10"
+                  className="pl-10 pr-10 mt-3 h-11"
                 />
                 <button
                   type="button"

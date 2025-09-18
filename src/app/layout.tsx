@@ -47,7 +47,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <UserProvider initialRole={userRole} initialProfile={userProfile}>
-              <div className="relative flex min-h-screen flex-col">
+              <div className="relative flex h-screen flex-col overflow-hidden">
                 <AppShell>{children}</AppShell>
               </div>
             </UserProvider>
