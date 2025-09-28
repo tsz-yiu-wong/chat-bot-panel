@@ -22,6 +22,7 @@ import { createClient } from '@/lib/supabase-client';
 import { type UserRole } from '@/lib/permissions';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/components/user-context';
+import { useMounted } from '@/hooks/use-mounted';
 
 interface UserProfile {
   username: string;
@@ -37,6 +38,7 @@ interface UserMenuProps {
 export function UserMenu({ className }: UserMenuProps) {
   const { t } = useTranslation();
   const { userProfile, loading } = useUser();
+  const isMounted = useMounted();
 
   const handleLogout = async () => {
     try {
@@ -62,7 +64,7 @@ export function UserMenu({ className }: UserMenuProps) {
   if (!userProfile) {
     return (
       <span className={`text-sm font-medium text-muted-foreground ${className}`}>
-        {t('user_menu.unknown_user')}
+        {isMounted ? t('user_menu.unknown_user') : 'Unknown User'}
       </span>
     );
   }
@@ -81,20 +83,20 @@ export function UserMenu({ className }: UserMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" alignOffset={-4} sideOffset={8}>
-        <DropdownMenuLabel>{t('user_menu.user_info')}</DropdownMenuLabel>
+        <DropdownMenuLabel>{isMounted ? t('user_menu.user_info') : 'User Info'}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
         <div className="px-2 py-2 space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <User className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{t('user_menu.username')}</span>
+            <span className="text-muted-foreground">{isMounted ? t('user_menu.username') : 'Username:'}</span>
             <span className="font-medium">{userProfile.username}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
             <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{t('user_menu.role')}</span>
-            <span className="font-medium">{getRoleDisplayName(userProfile.role)}</span>
+            <span className="text-muted-foreground">{isMounted ? t('user_menu.role') : 'Role:'}</span>
+            <span className="font-medium">{isMounted ? getRoleDisplayName(userProfile.role) : userProfile.role}</span>
           </div>
         </div>
         
@@ -105,7 +107,7 @@ export function UserMenu({ className }: UserMenuProps) {
           className="text-red-600 focus:text-red-600 cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          {t('user_menu.logout')}
+          {isMounted ? t('user_menu.logout') : 'Logout'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

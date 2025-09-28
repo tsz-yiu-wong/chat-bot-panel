@@ -28,5 +28,77 @@
     "username": "用户名:",
     "role": "权限组:",
     "logout": "登出"
+  },
+  "common": {
+    "all": "全部",
+    "search": "搜索",
+    "edit": "编辑",
+    "delete": "删除",
+    "add": "添加",
+    "cancel": "取消",
+    "save": "保存"
+  },
+  "knowledge": {
+    "title": "知识库管理",
+    "add_knowledge": "添加知识库",
+    "search_placeholder": "搜索知识库...",
+    "total_count": "共 {{count}} 条知识库",
+    "no_results": "暂无匹配的知识库项目",
+    "types": {
+      "abbreviation": "缩写",
+      "script": "话术"
+    },
+    "fields": {
+      "abbreviation": "缩写",
+      "full_form": "全称",
+      "description": "描述",
+      "user_text": "用户输入",
+      "answer_text": "回答内容"
+    },
+    "labels": {
+      "knowledge_type": "知识库类型：",
+      "category": "分类：",
+      "scene": "场景：",
+      "language": "语言："
+    },
+    "placeholders": {
+      "select_category": "选择分类",
+      "enter_abbreviation": "请输入缩写",
+      "enter_full_form": "请输入全称",
+      "enter_description": "请输入描述（可选）",
+      "enter_user_text": "请输入用户文本",
+      "enter_answer_text": "请输入回答文本",
+      "enter_category_name": "请输入{{type}}名称",
+      "english_name": "英文名称",
+      "chinese_name": "中文名称",
+      "vietnamese_name": "越南文名称"
+    },
+    "buttons": {
+      "manage_categories": "管理分类",
+      "add_category": "添加分类",
+      "add_scene": "添加场景"
+    },
+    "dialogs": {
+      "add_knowledge": "添加知识库",
+      "edit_knowledge": "编辑知识库",
+      "manage_categories": "管理分类"
+    },
+    "validation": {
+      "select_category": "请选择分类",
+      "abbreviation_required": "缩写为必填项",
+      "full_form_required": "全称为必填项",
+      "user_text_required": "用户输入为必填项",
+      "answer_text_required": "回答内容为必填项",
+      "category_name_required": "请输入分类名称",
+      "create_failed": "创建失败",
+      "update_failed": "更新失败",
+      "delete_failed": "删除失败"
+    },
+    "actions": {
+      "saving": "保存中...",
+      "deleting": "删除中...",
+      "delete_confirm": "确认删除{{type}} \"{{name}}\" ？",
+      "delete_confirm_simple": "确认删除{{type}}？"
+    }
   }
 }

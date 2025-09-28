@@ -28,5 +28,77 @@
     "username": "Username:",
     "role": "Role:",
     "logout": "Logout"
+  },
+  "common": {
+    "all": "All",
+    "search": "Search",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "knowledge": {
+    "title": "Knowledge Management",
+    "add_knowledge": "Add Knowledge",
+    "search_placeholder": "Search knowledge...",
+    "total_count": "Total {{count}} knowledge",
+    "no_results": "No matching knowledge items found",
+    "types": {
+      "abbreviation": "Abbreviation",
+      "script": "Script"
+    },
+    "fields": {
+      "abbreviation": "Abbreviation",
+      "full_form": "Full Form",
+      "description": "Description",
+      "user_text": "User",
+      "answer_text": "Answer"
+    },
+    "labels": {
+      "knowledge_type": "Knowledge Type:",
+      "category": "Category:",
+      "scene": "Scene:",
+      "language": "Language:"
+    },
+    "placeholders": {
+      "select_category": "Select category",
+      "enter_abbreviation": "Enter abbreviation",
+      "enter_full_form": "Enter full form",
+      "enter_description": "Enter description (optional)",
+      "enter_user_text": "Enter user text",
+      "enter_answer_text": "Enter answer text",
+      "enter_category_name": "Enter {{type}} name",
+      "english_name": "English name",
+      "chinese_name": "Chinese name",
+      "vietnamese_name": "Vietnamese name"
+    },
+    "buttons": {
+      "manage_categories": "Manage Categories",
+      "add_category": "Add Category",
+      "add_scene": "Add Scene"
+    },
+    "dialogs": {
+      "add_knowledge": "Add Knowledge",
+      "edit_knowledge": "Edit Knowledge",
+      "manage_categories": "Manage Categories"
+    },
+    "validation": {
+      "select_category": "Please select a category",
+      "abbreviation_required": "Abbreviation is required",
+      "full_form_required": "Full form is required",
+      "user_text_required": "User text is required",
+      "answer_text_required": "Answer text is required",
+      "category_name_required": "Please enter category name",
+      "create_failed": "Failed to create",
+      "update_failed": "Failed to update",
+      "delete_failed": "Failed to delete"
+    },
+    "actions": {
+      "saving": "Saving...",
+      "deleting": "Deleting...",
+      "delete_confirm": "Confirm to delete {{type}} \"{{name}}\" ?",
+      "delete_confirm_simple": "Confirm to delete {{type}}?"
+    }
   }
 }

@@ -1,6 +1,9 @@
 -- =================================================================
 -- Filename: 04_prompts_schema.sql
 -- Description: Defines the schema for the Prompts Management module.
+-- Note: This table uses a "long" format for multi-language support,
+-- where each language version of a prompt is a separate row.
+-- The 'name' field acts as a common identifier for all language variants of the same prompt.
 -- =================================================================
 
 -- =================================================================
@@ -9,12 +12,11 @@
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.prompts (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
+    name TEXT NOT NULL, -- Identifier for a group of language-specific prompts
     model_name TEXT,
     stage_name TEXT,
-    prompt_zh TEXT,
-    prompt_en TEXT,
-    prompt_vi TEXT,
+    language language_type NOT NULL, -- From 00_helpers.sql ('en', 'zh', 'vi')
+    prompt TEXT,
     mark TEXT,
     -- Standard Fields
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -25,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.prompts (
 -- Indexes for prompts
 CREATE INDEX IF NOT EXISTS idx_prompts_name ON public.prompts(name);
 CREATE INDEX IF NOT EXISTS idx_prompts_stage_name ON public.prompts(stage_name);
+CREATE INDEX IF NOT EXISTS idx_prompts_language ON public.prompts(language);
 CREATE INDEX IF NOT EXISTS idx_prompts_is_deleted ON public.prompts(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_prompts_updated_at_desc ON public.prompts(updated_at DESC NULLS LAST);
 

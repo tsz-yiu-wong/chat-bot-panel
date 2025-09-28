@@ -23,7 +23,7 @@ import { LanguageToggle } from './language-toggle';
 import { UserMenu } from './user-menu';
 import { useTranslation } from 'react-i18next';
 import { useMounted } from '@/hooks/use-mounted';
-import { getMenuItems, type UserRole } from '@/lib/permissions';
+import { getMenuItems, type UserRole, MENU_CONFIG } from '@/lib/permissions';
 import { useUser } from '@/components/user-context';
 
 // 图标映射
@@ -76,13 +76,6 @@ export function Sidebar() {
   // 根据用户角色获取菜单项
   const menuItems = getMenuItems(userRole);
 
-  // 转换菜单项格式
-  const navItems = menuItems.map(item => ({
-    href: item.href,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-    label: t(item.labelKey)
-  }));
-
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-46 flex-col border-r bg-card sm:flex">
       <nav className="flex flex-col gap-2 p-4">
@@ -90,8 +83,10 @@ export function Sidebar() {
           <Bot className="h-12 w-12 text-primary" />
         </div>
 
-        {navItems.map((item) => {
+        {menuItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
+          const Icon = iconMap[item.icon as keyof typeof iconMap];
+          const defaultLabel = Object.values(MENU_CONFIG).find(mc => mc.key === item.key)?.label || '';
 
           return (
             <Link
@@ -103,8 +98,8 @@ export function Sidebar() {
               )}
             >
               {/* 为图标添加 flex-shrink-0 以防止其在文本过长时被压缩 */}
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {isMounted ? item.label : <span className="w-20 h-5 inline-block" />}
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {isMounted ? t(item.labelKey) : defaultLabel}
             </Link>
           );
         })}

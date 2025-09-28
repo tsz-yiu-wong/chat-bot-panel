@@ -9,11 +9,28 @@ import zhResources from '../../public/locales/zh.json';
 import enResources from '../../public/locales/en.json';
 import viResources from '../../public/locales/vi.json';
 
+// 获取初始语言设置，确保与服务端一致
+const getInitialLanguage = () => {
+  if (typeof window === 'undefined') {
+    return 'zh'; // 服务端默认中文
+  }
+  
+  // 客户端：尝试从localStorage获取，否则使用中文
+  try {
+    return localStorage.getItem('i18nextLng') || 'zh';
+  } catch {
+    return 'zh';
+  }
+};
+
+const initialLanguage = getInitialLanguage();
+
 i18n
   .use(initReactI18next)
   .use(LanguageDetector)
   .init({
-    fallbackLng: 'zh', // 设置中文为默认语言
+    lng: initialLanguage, // 使用确定的初始语言
+    fallbackLng: 'zh',
     supportedLngs: ['en', 'zh', 'vi'],
     interpolation: {
       escapeValue: false, // react已经处理了XSS

@@ -15,17 +15,17 @@ export type UserRole = 'user' | 'admin' | 'super_admin';
  * This serves as a single source of truth for menu configuration.
  * The `icon` property corresponds to the name of a Lucide icon component.
  */
-export const MENU_CONFIG: Record<string, { icon: string; labelKey: string }> = {
-  '/dashboard': { icon: 'Gauge', labelKey: 'sidebar.dashboard' },
-  '/users': { icon: 'Users', labelKey: 'sidebar.users' },
-  '/characters': { icon: 'Bot', labelKey: 'sidebar.characters' },
-  '/prompts': { icon: 'MessageSquareQuote', labelKey: 'sidebar.prompts' },
-  '/knowledge': { icon: 'BookOpen', labelKey: 'sidebar.knowledge' },
-  '/topics': { icon: 'FileText', labelKey: 'sidebar.topics' },
-  '/settings': { icon: 'Settings', labelKey: 'sidebar.settings' },
-  '/test-chat': { icon: 'FlaskConical', labelKey: 'sidebar.test_chat' },
-  '/ui': { icon: 'LayoutDashboard', labelKey: 'sidebar.ui_components' },
-  '/permission': { icon: 'ShieldQuestion', labelKey: 'sidebar.permission' },
+export const MENU_CONFIG: Record<string, { key: string; icon: string; label: string; labelKey: string }> = {
+  '/dashboard': { key: 'dashboard', icon: 'Gauge', label: 'Dashboard', labelKey: 'sidebar.dashboard' },
+  '/users': { key: 'users', icon: 'Users', label: 'Users', labelKey: 'sidebar.users' },
+  '/characters': { key: 'characters', icon: 'Bot', label: 'Characters', labelKey: 'sidebar.characters' },
+  '/prompts': { key: 'prompts', icon: 'MessageSquareQuote', label: 'Prompts', labelKey: 'sidebar.prompts' },
+  '/knowledge': { key: 'knowledge', icon: 'BookOpen', label: 'Knowledge', labelKey: 'sidebar.knowledge' },
+  '/topics': { key: 'topics', icon: 'FileText', label: 'Topics', labelKey: 'sidebar.topics' },
+  '/settings': { key: 'settings', icon: 'Settings', label: 'Settings', labelKey: 'sidebar.settings' },
+  '/test-chat': { key: 'test_chat', icon: 'FlaskConical', label: 'Test Chat', labelKey: 'sidebar.test_chat' },
+  '/ui': { key: 'ui_components', icon: 'LayoutDashboard', label: 'UI Components', labelKey: 'sidebar.ui_components' },
+  '/permission': { key: 'permission', icon: 'ShieldQuestion', label: 'Permission', labelKey: 'sidebar.permission' },
 };
 
 /**
@@ -121,9 +121,9 @@ export function getDefaultPage(userRole: UserRole): string {
  * Retrieves the formatted menu items for a given user role.
  *
  * @param {UserRole} userRole - The role of the user.
- * @returns {Array<{ href: string; icon: string; labelKey: string }>} - An array of menu item objects.
+ * @returns {Array<{ key: string; href: string; icon: string; label: string; labelKey: string }>} - An array of menu item objects.
  */
-export function getMenuItems(userRole: UserRole): Array<{ href: string; icon: string; labelKey: string }> {
+export function getMenuItems(userRole: UserRole): Array<{ key: string; href: string; icon: string; label: string; labelKey: string }> {
   const menuPaths = ROLE_CONFIG[userRole].menuItems;
   return menuPaths.map(href => ({
     href,
