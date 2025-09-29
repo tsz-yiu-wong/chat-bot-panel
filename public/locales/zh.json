@@ -38,8 +38,16 @@
     "cancel": "取消",
     "save": "保存",
     "confirm": "确认",
+    "patterns": {
+      "add_item": "添加{{item}}",
+      "edit_item": "编辑{{item}}",
+      "manage_items": "管理{{items}}"
+    },
+    "titles": {
+      "management": "{{module}}管理"
+    },
     "labels": {
-      "language": "语言："
+      "language": "语言"
     },
     "status": {
       "saving": "保存中...",
@@ -51,7 +59,8 @@
       "select_required": "请选择{{field}}",
       "create_failed": "创建失败",
       "update_failed": "更新失败",
-      "delete_failed": "删除失败"
+      "delete_failed": "删除失败",
+      "all_required": "所有{{field}}都为必填项"
     },
     "actions": {
       "delete_confirm": "确认删除{{type}} \"{{name}}\" ？",
@@ -61,25 +70,31 @@
     "messages": {
       "search_placeholder": "搜索{{module}}...",
       "total_count": "共 {{count}} 条{{module}}",
-      "no_results": "暂无匹配的{{module}}项目"
+      "no_results": "暂无匹配的{{module}}项目",
+      "no_items": "暂无{{items}}",
+      "editing": "正在编辑：{{items}}",
+      "select_first": "请先选择{{entity}}"
     },
     "placeholders": {
       "enter_field": "请输入{{field}}",
+      "enter_optional": "请输入{{field}}（可选）",
       "select_field": "选择{{field}}",
-      "select_placeholder": "选择"
+      "select_placeholder": "选择",
+      "no_content": "暂无{{field}}"
+    },
+    "fields": {
+      "english_name": "英文名称",
+      "chinese_name": "中文名称",
+      "vietnamese_name": "越南文名称"
     }
   },
   "knowledge": {
     "module_name": "知识库",
-    "title": "知识库管理",
-    "add_button": "添加知识库",
+    "item_name": "知识库",
+    "categories_name": "分类",
     "types": {
       "abbreviation": "缩写",
       "script": "话术"
-    },
-    "entities": {
-      "category": "分类",
-      "scene": "场景"
     },
     "fields": {
       "abbreviation": "缩写",
@@ -89,55 +104,37 @@
       "answer_text": "回答内容"
     },
     "labels": {
-      "knowledge_type": "知识库类型：",
-      "category": "分类：",
-      "scene": "场景："
-    },
-    "placeholders": {
-      "enter_description": "请输入描述（可选）",
-      "english_name": "英文名称",
-      "chinese_name": "中文名称",
-      "vietnamese_name": "越南文名称"
-    },
-    "buttons": {
-      "manage_categories": "管理分类",
-      "add_category": "添加分类",
-      "add_scene": "添加场景"
-    },
-    "dialogs": {
-      "add": "添加知识库",
-      "edit": "编辑知识库",
-      "manage_categories": "管理分类"
+      "knowledge_type": "知识库类型",
+      "category": "分类",
+      "scene": "场景"
     }
   },
   "prompts": {
     "module_name": "提示词",
-    "title": "提示词管理",
-    "add_button": "添加提示词",
-    "entity": {
-      "stage": "阶段"
-    },
+    "item_name": "提示词",
+    "stages_name": "阶段",
     "fields": {
       "name": "名称",
       "prompt": "提示词内容",
       "note": "备注"
     },
     "labels": {
-      "stage": "阶段："
+      "stage": "阶段"
+    }
+  },
+  "topics": {
+    "module_name": "话题",
+    "item_name": "话题",
+    "categories_name": "分类",
+    "fields": {
+      "content": "话题内容",
+      "used": "使用次数"
     },
-    "placeholders": {
-      "enter_prompt": "请输入提示词内容（可选）",
-      "enter_note": "请输入备注（可选）",
-      "no_prompt": "暂无提示词内容"
-    },
-    "buttons": {
-      "manage_stages": "管理阶段",
-      "add_stage": "添加阶段"
-    },
-    "dialogs": {
-      "add": "添加提示词",
-      "edit": "编辑提示词",
-      "manage_stages": "管理阶段"
+    "labels": {
+      "category": "分类",
+      "subcategory": "子分类",
+      "topic": "话题",
+      "none_selected": "（不选择）"
     }
   }
 }

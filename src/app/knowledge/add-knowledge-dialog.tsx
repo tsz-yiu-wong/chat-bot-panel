@@ -107,7 +107,7 @@ export function AddKnowledgeDialog({
   // 表单验证
   const validateForm = (): string | null => {
     if (!formData.category_id) return t('common.validation.select_required', { 
-      field: formData.knowledge_type === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+      field: formData.knowledge_type === 'abbreviation' ? t('knowledge.labels.category') : t('knowledge.labels.scene') 
     });
     
     if (formData.knowledge_type === 'abbreviation') {
@@ -170,7 +170,7 @@ export function AddKnowledgeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('knowledge.dialogs.add')}</DialogTitle>
+          <DialogTitle>{t('common.patterns.add_item', { item: t('knowledge.item_name') })}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -229,7 +229,7 @@ export function AddKnowledgeDialog({
                   <Input
                     value={formData.description || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder={t('knowledge.placeholders.enter_description')}
+                    placeholder={t('common.placeholders.enter_optional', { field: t('knowledge.fields.description') })}
                     className="bg-muted"
                   />
                 </div>

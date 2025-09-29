@@ -122,21 +122,21 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
     <div className="flex flex-col h-full max-h-screen">
       {/* 页面标题和添加按钮 */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('knowledge.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('common.titles.management', { module: t('knowledge.module_name') })}</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setManageCategoriesOpen(true)}>
             <Settings className="h-4 w-4" />
-            {t('knowledge.buttons.manage_categories', 'Manage Categories')}
+            {t('common.patterns.manage_items', { items: t('knowledge.categories_name') })}
           </Button>
           <Button className="text-white" onClick={() => setAddKnowledgeOpen(true)}>
             <Plus className="h-4 w-4" />
-            {t('knowledge.add_button')}
+            {t('common.patterns.add_item', { item: t('knowledge.item_name') })}
           </Button>
         </div>
       </div>
 
       {/* 搜索和筛选区域 */}
-      <div className="flex gap-4 items-center mb-6">
+      <div className="flex gap-4 items-center mb-4">
         {/* 搜索框 */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -203,7 +203,7 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
       </div>
 
       {/* 结果统计 */}
-      <div className="mb-4">
+      <div className="mb-2 ml-2">
         <p className="text-sm text-muted-foreground">
           {t('common.messages.total_count', { 
             count: filteredItems.length, 

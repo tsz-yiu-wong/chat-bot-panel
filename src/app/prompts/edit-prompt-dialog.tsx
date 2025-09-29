@@ -65,7 +65,7 @@ export function EditPromptDialog({
 
   // 表单验证
   const validateForm = (): string | null => {
-    if (!prompt) return t('common.validation.select_required', { field: t('prompts.entity.stage') });
+    if (!prompt) return t('common.validation.select_required', { field: t('prompts.labels.stage') });
     if (!formData.name?.trim()) return t('common.validation.field_required', { field: t('prompts.fields.name') });
     return null;
   };
@@ -110,7 +110,7 @@ export function EditPromptDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('prompts.dialogs.edit')}</DialogTitle>
+          <DialogTitle>{t('common.patterns.edit_item', { item: t('prompts.item_name') })}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -149,7 +149,7 @@ export function EditPromptDialog({
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formData.prompt}
                 onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-                placeholder={t('prompts.placeholders.enter_prompt')}
+                placeholder={t('common.placeholders.enter_optional', { field: t('prompts.fields.prompt') })}
               />
             </div>
           </FormFieldCard>
@@ -161,7 +161,7 @@ export function EditPromptDialog({
               <Input
                 value={formData.note}
                 onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-                placeholder={t('prompts.placeholders.enter_note')}
+                placeholder={t('common.placeholders.enter_optional', { field: t('prompts.fields.note') })}
                 className="bg-muted"
               />
             </div>

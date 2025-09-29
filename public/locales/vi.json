@@ -38,8 +38,16 @@
     "cancel": "Hủy",
     "save": "Lưu",
     "confirm": "Xác nhận",
+    "patterns": {
+      "add_item": "Thêm {{item}}",
+      "edit_item": "Chỉnh sửa {{item}}",
+      "manage_items": "Quản lý {{items}}"
+    },
+    "titles": {
+      "management": "Quản lý {{module}}"
+    },
     "labels": {
-      "language": "Ngôn ngữ:"
+      "language": "Ngôn ngữ"
     },
     "status": {
       "saving": "Đang lưu...",
@@ -51,7 +59,8 @@
       "select_required": "Vui lòng chọn {{field}}",
       "create_failed": "Tạo thất bại",
       "update_failed": "Cập nhật thất bại",
-      "delete_failed": "Xóa thất bại"
+      "delete_failed": "Xóa thất bại",
+      "all_required": "Tất cả {{field}} là bắt buộc"
     },
     "actions": {
       "delete_confirm": "Xác nhận xóa {{type}} \"{{name}}\" ?",
@@ -61,25 +70,31 @@
     "messages": {
       "search_placeholder": "Tìm kiếm {{module}}...",
       "total_count": "Tổng cộng {{count}} {{module}}",
-      "no_results": "Không tìm thấy {{module}} phù hợp"
+      "no_results": "Không tìm thấy {{module}} phù hợp",
+      "no_items": "Không có {{items}}",
+      "editing": "Đang chỉnh sửa: {{items}}",
+      "select_first": "Vui lòng chọn {{entity}} trước"
     },
     "placeholders": {
       "enter_field": "Nhập {{field}}",
+      "enter_optional": "Nhập {{field}} (tùy chọn)",
       "select_field": "Chọn {{field}}",
-      "select_placeholder": "Chọn"
+      "select_placeholder": "Chọn",
+      "no_content": "Không có {{field}}"
+    },
+    "fields": {
+      "english_name": "Tên tiếng Anh",
+      "chinese_name": "Tên tiếng Trung",
+      "vietnamese_name": "Tên tiếng Việt"
     }
   },
   "knowledge": {
     "module_name": "kiến thức",
-    "title": "Quản lý kiến thức",
-    "add_button": "Thêm kiến thức",
+    "item_name": "Kiến thức",
+    "categories_name": "Danh mục",
     "types": {
       "abbreviation": "Viết tắt",
       "script": "Kịch bản"
-    },
-    "entities": {
-      "category": "danh mục",
-      "scene": "tình huống"
     },
     "fields": {
       "abbreviation": "Viết tắt",
@@ -89,55 +104,37 @@
       "answer_text": "Câu trả lời"
     },
     "labels": {
-      "knowledge_type": "Loại kiến thức:",
-      "category": "Danh mục:",
-      "scene": "Tình huống:"
-    },
-    "placeholders": {
-      "enter_description": "Nhập mô tả (tùy chọn)",
-      "english_name": "Tên tiếng Anh",
-      "chinese_name": "Tên tiếng Trung",
-      "vietnamese_name": "Tên tiếng Việt"
-    },
-    "buttons": {
-      "manage_categories": "Quản lý danh mục",
-      "add_category": "Thêm danh mục",
-      "add_scene": "Thêm tình huống"
-    },
-    "dialogs": {
-      "add": "Thêm kiến thức",
-      "edit": "Chỉnh sửa kiến thức",
-      "manage_categories": "Quản lý danh mục"
+      "knowledge_type": "Loại kiến thức",
+      "category": "Danh mục",
+      "scene": "Tình huống"
     }
   },
   "prompts": {
     "module_name": "gợi ý",
-    "title": "Quản lý gợi ý",
-    "add_button": "Thêm gợi ý",
-    "entity": {
-      "stage": "giai đoạn"
-    },
+    "item_name": "Gợi ý",
+    "stages_name": "Giai đoạn",
     "fields": {
       "name": "Tên",
       "prompt": "Nội dung gợi ý",
       "note": "Ghi chú"
     },
     "labels": {
-      "stage": "Giai đoạn:"
+      "stage": "Giai đoạn"
+    }
+  },
+  "topics": {
+    "module_name": "chủ đề",
+    "item_name": "Chủ đề",
+    "categories_name": "Danh mục",
+    "fields": {
+      "content": "Nội dung",
+      "used": "Đã sử dụng"
     },
-    "placeholders": {
-      "enter_prompt": "Nhập nội dung gợi ý (tùy chọn)",
-      "enter_note": "Nhập ghi chú (tùy chọn)",
-      "no_prompt": "Không có nội dung gợi ý"
-    },
-    "buttons": {
-      "manage_stages": "Quản lý giai đoạn",
-      "add_stage": "Thêm giai đoạn"
-    },
-    "dialogs": {
-      "add": "Thêm gợi ý",
-      "edit": "Chỉnh sửa gợi ý",
-      "manage_stages": "Quản lý giai đoạn"
+    "labels": {
+      "category": "Danh mục",
+      "subcategory": "Danh mục con",
+      "topic": "Chủ đề",
+      "none_selected": "(Không chọn)"
     }
   }
 }

@@ -52,11 +52,11 @@ export function CategorySelector({
   // 获取当前选中分类的显示名称
   const getSelectedCategoryName = () => {
     if (!value) return t('common.placeholders.select_field', { 
-      field: knowledgeType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+      field: knowledgeType === 'abbreviation' ? t('knowledge.labels.category') : t('knowledge.labels.scene') 
     });
     const category = availableCategories.find(cat => cat.id === value);
     return category?.displayName || t('common.placeholders.select_field', { 
-      field: knowledgeType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+      field: knowledgeType === 'abbreviation' ? t('knowledge.labels.category') : t('knowledge.labels.scene') 
     });
   };
 

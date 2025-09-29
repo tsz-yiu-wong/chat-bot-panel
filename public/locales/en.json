@@ -38,8 +38,16 @@
     "cancel": "Cancel",
     "save": "Save",
     "confirm": "Confirm",
+    "patterns": {
+      "add_item": "Add {{item}}",
+      "edit_item": "Edit {{item}}",
+      "manage_items": "Manage {{items}}"
+    },
+    "titles": {
+      "management": "{{module}} Management"
+    },
     "labels": {
-      "language": "Language:"
+      "language": "Language"
     },
     "status": {
       "saving": "Saving...",
@@ -51,7 +59,8 @@
       "select_required": "Please select {{field}}",
       "create_failed": "Failed to create",
       "update_failed": "Failed to update",
-      "delete_failed": "Failed to delete"
+      "delete_failed": "Failed to delete",
+      "all_required": "All {{field}} are required"
     },
     "actions": {
       "delete_confirm": "Confirm to delete {{type}} \"{{name}}\" ?",
@@ -61,25 +70,31 @@
     "messages": {
       "search_placeholder": "Search {{module}}...",
       "total_count": "Total {{count}} {{module}}",
-      "no_results": "No matching {{module}} found"
+      "no_results": "No matching {{module}} found",
+      "no_items": "No {{items}}",
+      "editing": "Editing: {{items}}",
+      "select_first": "Please select {{entity}} first"
     },
     "placeholders": {
       "enter_field": "Enter {{field}}",
+      "enter_optional": "Enter {{field}} (optional)",
       "select_field": "Select {{field}}",
-      "select_placeholder": "Select"
+      "select_placeholder": "Select",
+      "no_content": "No {{field}} content"
+    },
+    "fields": {
+      "english_name": "English name",
+      "chinese_name": "Chinese name",
+      "vietnamese_name": "Vietnamese name"
     }
   },
   "knowledge": {
     "module_name": "knowledge",
-    "title": "Knowledge Management",
-    "add_button": "Add Knowledge",
+    "item_name": "Knowledge",
+    "categories_name": "Categories",
     "types": {
       "abbreviation": "Abbreviation",
       "script": "Script"
-    },
-    "entities": {
-      "category": "category",
-      "scene": "scene"
     },
     "fields": {
       "abbreviation": "Abbreviation",
@@ -89,55 +104,37 @@
       "answer_text": "Answer"
     },
     "labels": {
-      "knowledge_type": "Knowledge Type:",
-      "category": "Category:",
-      "scene": "Scene:"
-    },
-    "placeholders": {
-      "enter_description": "Enter description (optional)",
-      "english_name": "English name",
-      "chinese_name": "Chinese name",
-      "vietnamese_name": "Vietnamese name"
-    },
-    "buttons": {
-      "manage_categories": "Manage Categories",
-      "add_category": "Add Category",
-      "add_scene": "Add Scene"
-    },
-    "dialogs": {
-      "add": "Add Knowledge",
-      "edit": "Edit Knowledge",
-      "manage_categories": "Manage Categories"
+      "knowledge_type": "Knowledge Type",
+      "category": "Category",
+      "scene": "Scene"
     }
   },
   "prompts": {
     "module_name": "prompts",
-    "title": "Prompts Management",
-    "add_button": "Add Prompt",
-    "entity": {
-      "stage": "stage"
-    },
+    "item_name": "Prompt",
+    "stages_name": "Stages",
     "fields": {
       "name": "Name",
       "prompt": "Prompt",
       "note": "Note"
     },
     "labels": {
-      "stage": "Stage:"
+      "stage": "Stage"
+    }
+  },
+  "topics": {
+    "module_name": "topics",
+    "item_name": "Topic",
+    "categories_name": "Categories",
+    "fields": {
+      "content": "Content",
+      "used": "Used"
     },
-    "placeholders": {
-      "enter_prompt": "Enter prompt (optional)",
-      "enter_note": "Enter note (optional)",
-      "no_prompt": "No prompt content"
-    },
-    "buttons": {
-      "manage_stages": "Manage Stages",
-      "add_stage": "Add Stage"
-    },
-    "dialogs": {
-      "add": "Add Prompt",
-      "edit": "Edit Prompt",
-      "manage_stages": "Manage Stages"
+    "labels": {
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "topic": "Topic",
+      "none_selected": "(None)"
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Edit, Trash2, X, Save } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ export function ManageStagesDialog({
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
   const [newStageName, setNewStageName] = useState<string>('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 开始编辑
   const startEdit = (stage: PromptStage) => {
@@ -52,6 +53,13 @@ export function ManageStagesDialog({
       id: stage.id,
       name: stage.name
     });
+    // 滚动到编辑项，确保输入框完整可见
+    setTimeout(() => {
+      const editingElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
+      if (editingElement) {
+        editingElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 0);
   };
 
   // 取消编辑
@@ -67,7 +75,7 @@ export function ManageStagesDialog({
     if (isAddingNew) {
       // 添加新 Stage
       if (!newStageName.trim()) {
-        alert(t('common.validation.field_required', { field: t('prompts.entity.stage') }));
+        alert(t('common.validation.field_required', { field: t('prompts.labels.stage') }));
         return;
       }
       
@@ -84,7 +92,7 @@ export function ManageStagesDialog({
     } else {
       // 更新现有 Stage
       if (!editingData || !editingData.name.trim()) {
-        alert(t('common.validation.field_required', { field: t('prompts.entity.stage') }));
+        alert(t('common.validation.field_required', { field: t('prompts.labels.stage') }));
         return;
       }
 
@@ -119,6 +127,13 @@ export function ManageStagesDialog({
   const startAddNewStage = () => {
     setIsAddingNew(true);
     setNewStageName('');
+    // 滚动到新增项
+    setTimeout(() => {
+      const newItemElement = document.querySelector('[data-new-stage="true"]');
+      if (newItemElement) {
+        newItemElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 0);
   };
 
   return (
@@ -126,32 +141,32 @@ export function ManageStagesDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>{t('prompts.dialogs.manage_stages')}</DialogTitle>
+            <DialogTitle>{t('common.patterns.manage_items', { items: t('prompts.stages_name') })}</DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 flex-1 overflow-hidden">
             {/* Stage 列表 */}
-            <div className="flex-1 overflow-y-auto">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
               <div className="space-y-2">
                 {stages.map((stage) => (
-                  <Card key={stage.id} className="p-3">
+                  <Card key={stage.id} data-stage-id={stage.id} className="py-2 px-4">
                     <div className="flex items-center justify-between">
                       {editingId === stage.id ? (
                         // 编辑模式
-                        <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 pt-2">
                           <Input
                             value={editingData?.name || ''}
                             onChange={(e) => setEditingData(prev => 
                               prev ? { ...prev, name: e.target.value } : null
                             )}
-                            placeholder={t('common.placeholders.enter_field', { field: t('prompts.entity.stage') })}
+                            placeholder={t('common.placeholders.enter_field', { field: t('prompts.labels.stage') })}
                             className="flex-1 bg-muted"
                           />
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={cancelEdit}>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={cancelEdit}>
                               <X className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="default" className="text-white" onClick={saveEdit}>
+                            <Button size="sm" variant="default" className="h-8 w-8 p-0 text-white" onClick={saveEdit}>
                               <Save className="h-4 w-4" />
                             </Button>
                           </div>
@@ -186,21 +201,21 @@ export function ManageStagesDialog({
 
                 {/* 添加新 Stage */}
                 {isAddingNew ? (
-                  <Card className="p-3">
-                    <div className="flex items-center justify-between">
+                  <Card data-new-stage="true" className="py-2 px-4">
+                    <div className="flex items-center justify-between pt-2">
                       <div className="flex-1 flex items-center gap-2">
                         <Input
                           value={newStageName}
                           onChange={(e) => setNewStageName(e.target.value)}
-                          placeholder={t('common.placeholders.enter_field', { field: t('prompts.entity.stage') })}
+                          placeholder={t('common.placeholders.enter_field', { field: t('prompts.labels.stage') })}
                           className="flex-1 bg-muted"
                           autoFocus
                         />
                         <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" onClick={cancelEdit}>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={cancelEdit}>
                             <X className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="default" className="text-white" onClick={saveEdit}>
+                          <Button size="sm" variant="default" className="h-8 w-8 p-0 text-white" onClick={saveEdit}>
                             <Save className="h-4 w-4" />
                           </Button>
                         </div>
@@ -210,11 +225,11 @@ export function ManageStagesDialog({
                 ) : (
                   <Button 
                     variant="outline" 
-                    className="w-full border-dashed h-[62px]"
+                    className="w-full border-dashed h-[46px]"
                     onClick={startAddNewStage}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    {t('prompts.buttons.add_stage')}
+                    {t('common.patterns.add_item', { item: t('prompts.labels.stage') })}
                   </Button>
                 )}
               </div>
@@ -235,7 +250,7 @@ export function ManageStagesDialog({
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
         title={deleteConfirm ? t('common.actions.delete_confirm', { 
-          type: t('prompts.entity.stage'), 
+          type: t('prompts.labels.stage'), 
           name: deleteConfirm.name 
         }) : ''}
         onConfirm={handleDelete}

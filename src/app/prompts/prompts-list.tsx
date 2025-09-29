@@ -141,7 +141,7 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
               maxHeight: `calc(1.5em * ${MAX_DISPLAY_LINES})` 
             } : undefined}
           >
-            {prompt.prompt || t('prompts.placeholders.no_prompt')}
+            {prompt.prompt || t('common.placeholders.no_content', { field: t('prompts.fields.prompt') })}
           </div>
           {!isExpanded && needsExpand && (
             <div className="px-3 pb-3 text-sm text-muted-foreground">
@@ -183,21 +183,21 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
     <div className="flex flex-col h-full max-h-screen">
       {/* 页面标题和添加按钮 */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('prompts.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('common.titles.management', { module: t('prompts.module_name') })}</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setManageStagesOpen(true)}>
             <Settings className="h-4 w-4" />
-            {t('prompts.buttons.manage_stages')}
+            {t('common.patterns.manage_items', { items: t('prompts.stages_name') })}
           </Button>
           <Button className="text-white" onClick={() => setAddPromptOpen(true)}>
             <Plus className="h-4 w-4" />
-            {t('prompts.add_button')}
+            {t('common.patterns.add_item', { item: t('prompts.item_name') })}
           </Button>
         </div>
       </div>
 
       {/* 搜索和筛选区域 */}
-      <div className="flex gap-4 items-center mb-6">
+      <div className="flex gap-4 items-center mb-4">
         {/* 搜索框 */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -236,7 +236,7 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
       </div>
 
       {/* 结果统计 */}
-      <div className="mb-4">
+      <div className="mb-2 ml-2">
         <p className="text-sm text-muted-foreground">
           {t('common.messages.total_count', { 
             count: filteredPrompts.length, 

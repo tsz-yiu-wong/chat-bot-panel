@@ -37,9 +37,9 @@ export function StageSelector({
 
   // 获取当前选中 Stage 的显示名称
   const getSelectedStageName = () => {
-    if (!value) return t('common.placeholders.select_field', { field: t('prompts.entity.stage') });
+    if (!value) return t('common.placeholders.select_field', { field: t('prompts.labels.stage') });
     const stage = stages.find(s => s.id === value);
-    return stage?.name || t('common.placeholders.select_field', { field: t('prompts.entity.stage') });
+    return stage?.name || t('common.placeholders.select_field', { field: t('prompts.labels.stage') });
   };
 
   return (
