@@ -220,10 +220,10 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
                   {/* 第一行：分类标签 + 语言标签 + 操作按钮 */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary">
+                      <span className="px-2 py-1 text-xs font-semibold rounded-md bg-primary/10 dark:bg-primary/20 text-primary">
                         {item.category ? getHydrationSafeCategoryDisplayName(item.category, currentLanguage, isMounted) : t('knowledge.labels.category', 'Category')}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground">
                         {item.language}
                       </span>
                     </div>
@@ -266,10 +266,10 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
                   {/* 第一行：分类标签 + 语言标签 + 操作按钮 */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary">
+                      <span className="px-2 py-1 text-xs font-semibold rounded-md bg-primary/10 dark:bg-primary/20 text-primary">
                         {item.category ? getHydrationSafeCategoryDisplayName(item.category, currentLanguage, isMounted) : t('knowledge.labels.scene', 'Scene')}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground">
                         {item.language}
                       </span>
                     </div>

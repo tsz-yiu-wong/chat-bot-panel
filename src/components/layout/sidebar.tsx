@@ -94,7 +94,7 @@ export function Sidebar() {
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-foreground transition-all hover:bg-muted border-r-4 border-transparent',
-                isActive && 'bg-muted text-primary border-primary'
+                isActive && 'bg-primary/10 dark:bg-primary/20 text-primary border-primary font-semibold'
               )}
             >
               {/* 为图标添加 flex-shrink-0 以防止其在文本过长时被压缩 */}
