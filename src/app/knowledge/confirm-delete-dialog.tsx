@@ -66,7 +66,7 @@ export function ConfirmDeleteDialog({
                 onClick={handleConfirm}
                 disabled={isDeleting}
               >
-                {isDeleting ? t('knowledge.actions.deleting') : t('common.delete')}
+                {isDeleting ? t('common.status.deleting') : t('common.delete')}
               </Button>
             </div>
           </div>

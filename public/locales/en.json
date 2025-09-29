@@ -36,17 +36,50 @@
     "delete": "Delete",
     "add": "Add",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "confirm": "Confirm",
+    "labels": {
+      "language": "Language:"
+    },
+    "status": {
+      "saving": "Saving...",
+      "deleting": "Deleting...",
+      "loading": "Loading..."
+    },
+    "validation": {
+      "field_required": "{{field}} is required",
+      "select_required": "Please select {{field}}",
+      "create_failed": "Failed to create",
+      "update_failed": "Failed to update",
+      "delete_failed": "Failed to delete"
+    },
+    "actions": {
+      "delete_confirm": "Confirm to delete {{type}} \"{{name}}\" ?",
+      "expand": "More",
+      "collapse": "Less"
+    },
+    "messages": {
+      "search_placeholder": "Search {{module}}...",
+      "total_count": "Total {{count}} {{module}}",
+      "no_results": "No matching {{module}} found"
+    },
+    "placeholders": {
+      "enter_field": "Enter {{field}}",
+      "select_field": "Select {{field}}",
+      "select_placeholder": "Select"
+    }
   },
   "knowledge": {
+    "module_name": "knowledge",
     "title": "Knowledge Management",
-    "add_knowledge": "Add Knowledge",
-    "search_placeholder": "Search knowledge...",
-    "total_count": "Total {{count}} knowledge",
-    "no_results": "No matching knowledge items found",
+    "add_button": "Add Knowledge",
     "types": {
       "abbreviation": "Abbreviation",
       "script": "Script"
+    },
+    "entities": {
+      "category": "category",
+      "scene": "scene"
     },
     "fields": {
       "abbreviation": "Abbreviation",
@@ -58,17 +91,10 @@
     "labels": {
       "knowledge_type": "Knowledge Type:",
       "category": "Category:",
-      "scene": "Scene:",
-      "language": "Language:"
+      "scene": "Scene:"
     },
     "placeholders": {
-      "select_category": "Select category",
-      "enter_abbreviation": "Enter abbreviation",
-      "enter_full_form": "Enter full form",
       "enter_description": "Enter description (optional)",
-      "enter_user_text": "Enter user text",
-      "enter_answer_text": "Enter answer text",
-      "enter_category_name": "Enter {{type}} name",
       "english_name": "English name",
       "chinese_name": "Chinese name",
       "vietnamese_name": "Vietnamese name"
@@ -79,26 +105,39 @@
       "add_scene": "Add Scene"
     },
     "dialogs": {
-      "add_knowledge": "Add Knowledge",
-      "edit_knowledge": "Edit Knowledge",
+      "add": "Add Knowledge",
+      "edit": "Edit Knowledge",
       "manage_categories": "Manage Categories"
+    }
+  },
+  "prompts": {
+    "module_name": "prompts",
+    "title": "Prompts Management",
+    "add_button": "Add Prompt",
+    "entity": {
+      "stage": "stage"
     },
-    "validation": {
-      "select_category": "Please select a category",
-      "abbreviation_required": "Abbreviation is required",
-      "full_form_required": "Full form is required",
-      "user_text_required": "User text is required",
-      "answer_text_required": "Answer text is required",
-      "category_name_required": "Please enter category name",
-      "create_failed": "Failed to create",
-      "update_failed": "Failed to update",
-      "delete_failed": "Failed to delete"
+    "fields": {
+      "name": "Name",
+      "prompt": "Prompt",
+      "note": "Note"
     },
-    "actions": {
-      "saving": "Saving...",
-      "deleting": "Deleting...",
-      "delete_confirm": "Confirm to delete {{type}} \"{{name}}\" ?",
-      "delete_confirm_simple": "Confirm to delete {{type}}?"
+    "labels": {
+      "stage": "Stage:"
+    },
+    "placeholders": {
+      "enter_prompt": "Enter prompt (optional)",
+      "enter_note": "Enter note (optional)",
+      "no_prompt": "No prompt content"
+    },
+    "buttons": {
+      "manage_stages": "Manage Stages",
+      "add_stage": "Add Stage"
+    },
+    "dialogs": {
+      "add": "Add Prompt",
+      "edit": "Edit Prompt",
+      "manage_stages": "Manage Stages"
     }
   }
 }

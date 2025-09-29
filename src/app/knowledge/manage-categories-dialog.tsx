@@ -87,7 +87,9 @@ export function ManageCategoriesDialog({
     if (isAddingNew) {
       // 添加新分类
       if (!newCategoryName.trim()) {
-        alert(t('knowledge.validation.category_name_required'));
+        alert(t('common.validation.field_required', { 
+          field: selectedType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+        }));
         return;
       }
       
@@ -102,7 +104,7 @@ export function ManageCategoriesDialog({
         setIsAddingNew(false);
         setNewCategoryName('');
       } else {
-        alert(result.error || t('knowledge.validation.create_failed'));
+        alert(result.error || t('common.validation.create_failed'));
       }
     } else {
       // 更新现有分类 - 只更新当前语言的字段
@@ -130,7 +132,9 @@ export function ManageCategoriesDialog({
       }
 
       if (!valueToUpdate.trim()) {
-        alert(t('knowledge.validation.category_name_required'));
+        alert(t('common.validation.field_required', { 
+          field: selectedType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+        }));
         return;
       }
 
@@ -140,7 +144,7 @@ export function ManageCategoriesDialog({
         setEditingId(null);
         setEditingData(null);
       } else {
-        alert(result.error || t('knowledge.validation.update_failed'));
+        alert(result.error || t('common.validation.update_failed'));
       }
     }
   };
@@ -154,7 +158,7 @@ export function ManageCategoriesDialog({
     if (result.success) {
       setDeleteConfirm(null);
     } else {
-      alert(result.error || t('knowledge.validation.delete_failed'));
+      alert(result.error || t('common.validation.delete_failed'));
     }
   };
 
@@ -256,7 +260,9 @@ export function ManageCategoriesDialog({
                         <Input
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder={t('knowledge.placeholders.enter_category_name', { type: selectedType === 'abbreviation' ? t('knowledge.labels.category') : t('knowledge.labels.scene') })}
+                          placeholder={t('common.placeholders.enter_field', { 
+                            field: selectedType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+                          })}
                           className="flex-1 bg-muted"
                           autoFocus
                         />
@@ -298,7 +304,10 @@ export function ManageCategoriesDialog({
       <ConfirmDeleteDialog
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
-        title={deleteConfirm ? t('knowledge.actions.delete_confirm', { type: selectedType, name: deleteConfirm.name }) : ''}
+        title={deleteConfirm ? t('common.actions.delete_confirm', { 
+          type: selectedType === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene'),
+          name: deleteConfirm.name 
+        }) : ''}
         onConfirm={handleDelete}
       />
     </>

@@ -106,14 +106,16 @@ export function AddKnowledgeDialog({
 
   // 表单验证
   const validateForm = (): string | null => {
-    if (!formData.category_id) return t('knowledge.validation.select_category');
+    if (!formData.category_id) return t('common.validation.select_required', { 
+      field: formData.knowledge_type === 'abbreviation' ? t('knowledge.entities.category') : t('knowledge.entities.scene') 
+    });
     
     if (formData.knowledge_type === 'abbreviation') {
-      if (!formData.abbreviation?.trim()) return t('knowledge.validation.abbreviation_required');
-      if (!formData.full_form?.trim()) return t('knowledge.validation.full_form_required');
+      if (!formData.abbreviation?.trim()) return t('common.validation.field_required', { field: t('knowledge.fields.abbreviation') });
+      if (!formData.full_form?.trim()) return t('common.validation.field_required', { field: t('knowledge.fields.full_form') });
     } else if (formData.knowledge_type === 'script') {
-      if (!formData.user_text?.trim()) return t('knowledge.validation.user_text_required');
-      if (!formData.answer_text?.trim()) return t('knowledge.validation.answer_text_required');
+      if (!formData.user_text?.trim()) return t('common.validation.field_required', { field: t('knowledge.fields.user_text') });
+      if (!formData.answer_text?.trim()) return t('common.validation.field_required', { field: t('knowledge.fields.answer_text') });
     }
     
     return null;
@@ -148,10 +150,10 @@ export function AddKnowledgeDialog({
         resetForm();
         onOpenChange(false);
       } else {
-        alert(result.error || t('knowledge.validation.create_failed'));
+        alert(result.error || t('common.validation.create_failed'));
       }
     } catch (error) {
-      alert(t('knowledge.validation.create_failed'));
+      alert(t('common.validation.create_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -168,7 +170,7 @@ export function AddKnowledgeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('knowledge.dialogs.add_knowledge')}</DialogTitle>
+          <DialogTitle>{t('knowledge.dialogs.add')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -203,7 +205,7 @@ export function AddKnowledgeDialog({
                   <Input
                     value={formData.abbreviation || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, abbreviation: e.target.value }))}
-                    placeholder={t('knowledge.placeholders.enter_abbreviation')}
+                    placeholder={t('common.placeholders.enter_field', { field: t('knowledge.fields.abbreviation') })}
                     className="bg-muted"
                   />
                 </div>
@@ -215,7 +217,7 @@ export function AddKnowledgeDialog({
                   <Input
                     value={formData.full_form || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, full_form: e.target.value }))}
-                    placeholder={t('knowledge.placeholders.enter_full_form')}
+                    placeholder={t('common.placeholders.enter_field', { field: t('knowledge.fields.full_form') })}
                     className="bg-muted"
                   />
                 </div>
@@ -243,7 +245,7 @@ export function AddKnowledgeDialog({
                     className="flex min-h-[60px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={formData.user_text || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, user_text: e.target.value }))}
-                    placeholder={t('knowledge.placeholders.enter_user_text')}
+                    placeholder={t('common.placeholders.enter_field', { field: t('knowledge.fields.user_text') })}
                   />
                 </div>
               </FormFieldCard>
@@ -255,7 +257,7 @@ export function AddKnowledgeDialog({
                     className="flex min-h-[80px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={formData.answer_text || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, answer_text: e.target.value }))}
-                    placeholder={t('knowledge.placeholders.enter_answer_text')}
+                    placeholder={t('common.placeholders.enter_field', { field: t('knowledge.fields.answer_text') })}
                   />
                 </div>
               </FormFieldCard>
@@ -280,7 +282,7 @@ export function AddKnowledgeDialog({
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? t('knowledge.actions.saving') : t('common.save')}
+                {isSubmitting ? t('common.status.saving') : t('common.save')}
               </Button>
             </div>
           </div>

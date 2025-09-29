@@ -36,17 +36,50 @@
     "delete": "Xóa",
     "add": "Thêm",
     "cancel": "Hủy",
-    "save": "Lưu"
+    "save": "Lưu",
+    "confirm": "Xác nhận",
+    "labels": {
+      "language": "Ngôn ngữ:"
+    },
+    "status": {
+      "saving": "Đang lưu...",
+      "deleting": "Đang xóa...",
+      "loading": "Đang tải..."
+    },
+    "validation": {
+      "field_required": "{{field}} là bắt buộc",
+      "select_required": "Vui lòng chọn {{field}}",
+      "create_failed": "Tạo thất bại",
+      "update_failed": "Cập nhật thất bại",
+      "delete_failed": "Xóa thất bại"
+    },
+    "actions": {
+      "delete_confirm": "Xác nhận xóa {{type}} \"{{name}}\" ?",
+      "expand": "Xem thêm",
+      "collapse": "Thu gọn"
+    },
+    "messages": {
+      "search_placeholder": "Tìm kiếm {{module}}...",
+      "total_count": "Tổng cộng {{count}} {{module}}",
+      "no_results": "Không tìm thấy {{module}} phù hợp"
+    },
+    "placeholders": {
+      "enter_field": "Nhập {{field}}",
+      "select_field": "Chọn {{field}}",
+      "select_placeholder": "Chọn"
+    }
   },
   "knowledge": {
+    "module_name": "kiến thức",
     "title": "Quản lý kiến thức",
-    "add_knowledge": "Thêm kiến thức",
-    "search_placeholder": "Tìm kiếm kiến thức...",
-    "total_count": "Tổng cộng {{count}} kiến thức",
-    "no_results": "Không tìm thấy mục kiến thức phù hợp",
+    "add_button": "Thêm kiến thức",
     "types": {
       "abbreviation": "Viết tắt",
       "script": "Kịch bản"
+    },
+    "entities": {
+      "category": "danh mục",
+      "scene": "tình huống"
     },
     "fields": {
       "abbreviation": "Viết tắt",
@@ -58,17 +91,10 @@
     "labels": {
       "knowledge_type": "Loại kiến thức:",
       "category": "Danh mục:",
-      "scene": "Tình huống:",
-      "language": "Ngôn ngữ:"
+      "scene": "Tình huống:"
     },
     "placeholders": {
-      "select_category": "Chọn danh mục",
-      "enter_abbreviation": "Nhập viết tắt",
-      "enter_full_form": "Nhập dạng đầy đủ",
       "enter_description": "Nhập mô tả (tùy chọn)",
-      "enter_user_text": "Nhập văn bản người dùng",
-      "enter_answer_text": "Nhập văn bản câu trả lời",
-      "enter_category_name": "Nhập tên {{type}}",
       "english_name": "Tên tiếng Anh",
       "chinese_name": "Tên tiếng Trung",
       "vietnamese_name": "Tên tiếng Việt"
@@ -79,26 +105,39 @@
       "add_scene": "Thêm tình huống"
     },
     "dialogs": {
-      "add_knowledge": "Thêm kiến thức",
-      "edit_knowledge": "Chỉnh sửa kiến thức",
+      "add": "Thêm kiến thức",
+      "edit": "Chỉnh sửa kiến thức",
       "manage_categories": "Quản lý danh mục"
+    }
+  },
+  "prompts": {
+    "module_name": "gợi ý",
+    "title": "Quản lý gợi ý",
+    "add_button": "Thêm gợi ý",
+    "entity": {
+      "stage": "giai đoạn"
     },
-    "validation": {
-      "select_category": "Vui lòng chọn danh mục",
-      "abbreviation_required": "Viết tắt là bắt buộc",
-      "full_form_required": "Dạng đầy đủ là bắt buộc",
-      "user_text_required": "Văn bản người dùng là bắt buộc",
-      "answer_text_required": "Văn bản câu trả lời là bắt buộc",
-      "category_name_required": "Vui lòng nhập tên danh mục",
-      "create_failed": "Tạo thất bại",
-      "update_failed": "Cập nhật thất bại",
-      "delete_failed": "Xóa thất bại"
+    "fields": {
+      "name": "Tên",
+      "prompt": "Nội dung gợi ý",
+      "note": "Ghi chú"
     },
-    "actions": {
-      "saving": "Đang lưu...",
-      "deleting": "Đang xóa...",
-      "delete_confirm": "Xác nhận xóa {{type}} \"{{name}}\" ?",
-      "delete_confirm_simple": "Xác nhận xóa {{type}}?"
+    "labels": {
+      "stage": "Giai đoạn:"
+    },
+    "placeholders": {
+      "enter_prompt": "Nhập nội dung gợi ý (tùy chọn)",
+      "enter_note": "Nhập ghi chú (tùy chọn)",
+      "no_prompt": "Không có nội dung gợi ý"
+    },
+    "buttons": {
+      "manage_stages": "Quản lý giai đoạn",
+      "add_stage": "Thêm giai đoạn"
+    },
+    "dialogs": {
+      "add": "Thêm gợi ý",
+      "edit": "Chỉnh sửa gợi ý",
+      "manage_stages": "Quản lý giai đoạn"
     }
   }
 }

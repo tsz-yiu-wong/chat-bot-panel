@@ -11,29 +11,40 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface LanguageSelectorProps {
-  value: 'en' | 'zh' | 'vi';
-  onChange: (value: 'en' | 'zh' | 'vi') => void;
+import { PromptStage } from '../page';
+
+interface StageSelectorProps {
+  stages: PromptStage[];
+  value: string;
+  onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
 }
 
 /**
- * 语言选择器
- * 在多个对话框中复用的语言下拉选择组件
+ * Stage 选择器
+ * 用于选择 Prompt 的 Stage
  */
-export function LanguageSelector({ 
+export function StageSelector({ 
+  stages,
   value, 
   onChange, 
   disabled = false,
-  className = "justify-between min-w-[80px]"
-}: LanguageSelectorProps) {
-  const { t } = useHydrationSafeTranslation();
+  className = "justify-between min-w-[120px]"
+}: StageSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useHydrationSafeTranslation();
+
+  // 获取当前选中 Stage 的显示名称
+  const getSelectedStageName = () => {
+    if (!value) return t('common.placeholders.select_field', { field: t('prompts.entity.stage') });
+    const stage = stages.find(s => s.id === value);
+    return stage?.name || t('common.placeholders.select_field', { field: t('prompts.entity.stage') });
+  };
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-medium">{t('common.labels.language')}</span>
+      <span className="text-sm font-medium">{t('prompts.labels.stage')}</span>
       <DropdownMenu onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -41,20 +52,19 @@ export function LanguageSelector({
             className={className}
             disabled={disabled}
           >
-            {value}
+            {getSelectedStageName()}
             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${disabled ? 'opacity-50' : ''}`} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onChange('en')}>
-            en
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onChange('vi')}>
-            vi
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onChange('zh')}>
-            zh
-          </DropdownMenuItem>
+          {stages.map(stage => (
+            <DropdownMenuItem 
+              key={stage.id}
+              onClick={() => onChange(stage.id)}
+            >
+              {stage.name}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
