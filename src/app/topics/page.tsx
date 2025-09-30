@@ -134,26 +134,22 @@ export default async function TopicsPage() {
     }));
 
     return (
-      <div className="flex flex-col h-full">
-        <TopicsList 
-          initialCategories={allCategories}
-          initialSubcategories={allSubcategories}
-          initialTopics={topicsWithRelations}
-        />
-      </div>
+      <TopicsList 
+        initialCategories={allCategories}
+        initialSubcategories={allSubcategories}
+        initialTopics={topicsWithRelations}
+      />
     );
   } catch (error) {
     console.error('话题库页面加载失败:', error);
     
     // 在超时或错误时，返回带有空数据的页面，避免崩溃
     return (
-      <div className="flex flex-col h-full">
-        <TopicsList 
-          initialCategories={[]}
-          initialSubcategories={[]}
-          initialTopics={[]}
-        />
-      </div>
+      <TopicsList 
+        initialCategories={[]}
+        initialSubcategories={[]}
+        initialTopics={[]}
+      />
     );
   }
 }

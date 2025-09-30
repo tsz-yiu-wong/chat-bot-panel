@@ -127,15 +127,10 @@ export function TopicsList({
         }
       }
       
-      // 滚动到topic并高亮
+      // 滚动到topic
       const topicElement = document.getElementById(`topic-${topic.id}`);
       if (topicElement) {
         topicElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // 高亮效果
-        topicElement.classList.add('ring-2', 'ring-primary');
-        setTimeout(() => {
-          topicElement.classList.remove('ring-2', 'ring-primary');
-        }, 2000);
       }
     }, 100);
   };
@@ -177,7 +172,7 @@ export function TopicsList({
   };
 
   return (
-    <div className="flex flex-col h-full max-h-screen">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 3rem)' }}>
       {/* 页面标题和添加按钮 */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('common.titles.management', { module: t('topics.module_name') })}</h1>
@@ -248,9 +243,9 @@ export function TopicsList({
       </div>
 
       {/* 三列布局 */}
-      <div className="flex-1 flex gap-4 min-h-0 mb-4">
+      <div className="flex-1 flex gap-4 min-h-0">
         {/* 左侧 20%: Categories */}
-        <Card className="w-[20%] flex flex-col py-0 gap-0 mb-4">
+        <Card className="w-[20%] flex flex-col py-0 gap-0">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold">{t('topics.labels.category')}</h2>
           </div>
@@ -289,7 +284,7 @@ export function TopicsList({
         </Card>
 
         {/* 中间 20%: Subcategories */}
-        <Card className="w-[20%] flex flex-col py-0 gap-0 mb-4">
+        <Card className="w-[20%] flex flex-col py-0 gap-0">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold">{t('topics.labels.subcategory')}</h2>
           </div>
@@ -331,7 +326,7 @@ export function TopicsList({
         </Card>
 
         {/* 右侧 60%: Topics */}
-        <Card className="flex-1 flex flex-col py-0 gap-0 mb-4">
+        <Card className="flex-1 flex flex-col py-0 gap-0">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold">{t('topics.labels.topic')}</h2>
           </div>

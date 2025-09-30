@@ -64,7 +64,8 @@
     "actions": {
       "delete_confirm": "Xác nhận xóa {{type}} \"{{name}}\" ?",
       "expand": "Xem thêm",
-      "collapse": "Thu gọn"
+      "collapse": "Thu gọn",
+      "save_edits": "Lưu chỉnh sửa"
     },
     "messages": {
       "search_placeholder": "Tìm kiếm {{module}}...",
@@ -76,7 +77,9 @@
       "create_success": "Tạo thành công",
       "update_success": "Cập nhật thành công",
       "delete_success": "Xóa thành công",
-      "delete_failed": "Xóa thất bại"
+      "delete_failed": "Xóa thất bại",
+      "save_success": "Lưu thành công",
+      "save_failed": "Lưu thất bại"
     },
     "placeholders": {
       "enter_field": "Nhập {{field}}",
@@ -138,6 +141,47 @@
       "subcategory": "Danh mục con",
       "topic": "Chủ đề",
       "none_selected": "(Không chọn)"
+    }
+  },
+  "characters": {
+    "module_name": "nhân vật",
+    "item_name": "Nhân vật",
+    "language_label": "Ngôn ngữ nhân vật",
+    "tabs": {
+      "basic_info": "Thông tin cơ bản",
+      "preference": "Sở thích",
+      "experience": "Kinh nghiệm",
+      "values": "Giá trị",
+      "photo": "Ảnh"
+    },
+    "fields": {
+      "name": "Tên",
+      "age": "Tuổi",
+      "gender": "Giới tính",
+      "nationality": "Quốc tịch",
+      "job_title": "Chức vụ",
+      "height_cm": "Chiều cao (cm)",
+      "weight_kg": "Cân nặng (kg)",
+      "blood_type": "Nhóm máu",
+      "zodiac": "Cung hoàng đạo",
+      "birth_date": "Ngày sinh",
+      "birth_place": "Nơi sinh",
+      "current_address": "Địa chỉ hiện tại",
+      "work_address": "Địa chỉ làm việc",
+      "daily_routine": "Thói quen hàng ngày",
+      "favourite": "Yêu thích",
+      "family_member": "Thành viên gia đình",
+      "worldview": "Thế giới quan",
+      "life_philosophy": "Triết lý sống",
+      "personal_values": "Giá trị cá nhân",
+      "future_plan": "Kế hoạch tương lai",
+      "wish_place": "Nơi muốn đến",
+      "life_dream": "Ước mơ cuộc đời",
+      "education_exp": "Kinh nghiệm học vấn",
+      "work_exp": "Kinh nghiệm làm việc",
+      "life_event": "Sự kiện cuộc đời",
+      "marital_status": "Tình trạng hôn nhân",
+      "relationship_exp": "Kinh nghiệm tình cảm"
     }
   }
 }

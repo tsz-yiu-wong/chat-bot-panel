@@ -64,7 +64,8 @@
     "actions": {
       "delete_confirm": "确认删除{{type}} \"{{name}}\" ？",
       "expand": "展开",
-      "collapse": "收起"
+      "collapse": "收起",
+      "save_edits": "保存编辑"
     },
     "messages": {
       "search_placeholder": "搜索{{module}}...",
@@ -76,7 +77,9 @@
       "create_success": "创建成功",
       "update_success": "更新成功",
       "delete_success": "删除成功",
-      "delete_failed": "删除失败"
+      "delete_failed": "删除失败",
+      "save_success": "保存成功",
+      "save_failed": "保存失败"
     },
     "placeholders": {
       "enter_field": "请输入{{field}}",
@@ -138,6 +141,47 @@
       "subcategory": "子分类",
       "topic": "话题",
       "none_selected": "（不选择）"
+    }
+  },
+  "characters": {
+    "module_name": "人设",
+    "item_name": "人设",
+    "language_label": "人设语言",
+    "tabs": {
+      "basic_info": "基本信息",
+      "preference": "喜好",
+      "experience": "经历",
+      "values": "价值观",
+      "photo": "照片"
+    },
+    "fields": {
+      "name": "姓名",
+      "age": "年龄",
+      "gender": "性别",
+      "nationality": "国籍",
+      "job_title": "职业",
+      "height_cm": "身高 (cm)",
+      "weight_kg": "体重 (kg)",
+      "blood_type": "血型",
+      "zodiac": "星座",
+      "birth_date": "生日",
+      "birth_place": "出生地",
+      "current_address": "现居地",
+      "work_address": "工作地址",
+      "daily_routine": "日常作息",
+      "favourite": "喜好",
+      "family_member": "家庭成员",
+      "worldview": "世界观",
+      "life_philosophy": "人生格言",
+      "personal_values": "价值观",
+      "future_plan": "未来规划",
+      "wish_place": "想去的地方",
+      "life_dream": "人生梦想",
+      "education_exp": "教育经历",
+      "work_exp": "工作经历",
+      "life_event": "人生大事",
+      "marital_status": "婚姻状况",
+      "relationship_exp": "感情经历"
     }
   }
 }

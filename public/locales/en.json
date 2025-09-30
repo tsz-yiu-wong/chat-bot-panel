@@ -64,7 +64,8 @@
     "actions": {
       "delete_confirm": "Confirm to delete {{type}} \"{{name}}\" ?",
       "expand": "More",
-      "collapse": "Less"
+      "collapse": "Less",
+      "save_edits": "Save Edits"
     },
     "messages": {
       "search_placeholder": "Search {{module}}...",
@@ -76,7 +77,9 @@
       "create_success": "Created successfully",
       "update_success": "Updated successfully",
       "delete_success": "Deleted successfully",
-      "delete_failed": "Failed to delete"
+      "delete_failed": "Failed to delete",
+      "save_success": "Saved successfully",
+      "save_failed": "Failed to save"
     },
     "placeholders": {
       "enter_field": "Enter {{field}}",
@@ -92,7 +95,7 @@
     }
   },
   "knowledge": {
-    "module_name": "knowledge",
+    "module_name": "Knowledge",
     "item_name": "Knowledge",
     "categories_name": "Categories",
     "types": {
@@ -113,7 +116,7 @@
     }
   },
   "prompts": {
-    "module_name": "prompts",
+    "module_name": "Prompts",
     "item_name": "Prompt",
     "stages_name": "Stages",
     "fields": {
@@ -126,7 +129,7 @@
     }
   },
   "topics": {
-    "module_name": "topics",
+    "module_name": "Topics",
     "item_name": "Topic",
     "categories_name": "Categories",
     "fields": {
@@ -138,6 +141,47 @@
       "subcategory": "Subcategory",
       "topic": "Topic",
       "none_selected": "(None)"
+    }
+  },
+  "characters": {
+    "module_name": "Characters",
+    "item_name": "Character",
+    "language_label": "Character Language",
+    "tabs": {
+      "basic_info": "Basic Info",
+      "preference": "Preference",
+      "experience": "Experience",
+      "values": "Values",
+      "photo": "Photo"
+    },
+    "fields": {
+      "name": "Name",
+      "age": "Age",
+      "gender": "Gender",
+      "nationality": "Nationality",
+      "job_title": "Job Title",
+      "height_cm": "Height (cm)",
+      "weight_kg": "Weight (kg)",
+      "blood_type": "Blood Type",
+      "zodiac": "Zodiac",
+      "birth_date": "Birth Date",
+      "birth_place": "Birth Place",
+      "current_address": "Current Address",
+      "work_address": "Work Address",
+      "daily_routine": "Daily Routine",
+      "favourite": "Favourite",
+      "family_member": "Family Member",
+      "worldview": "Worldview",
+      "life_philosophy": "Life Philosophy",
+      "personal_values": "Personal Values",
+      "future_plan": "Future Plan",
+      "wish_place": "Wish Place",
+      "life_dream": "Life Dream",
+      "education_exp": "Education Experience",
+      "work_exp": "Work Experience",
+      "life_event": "Life Event",
+      "marital_status": "Marital Status",
+      "relationship_exp": "Relationship Experience"
     }
   }
 }

@@ -16,6 +16,7 @@ interface LanguageSelectorProps {
   onChange: (value: 'en' | 'zh' | 'vi') => void;
   disabled?: boolean;
   className?: string;
+  showLabel?: boolean;
 }
 
 /**
@@ -26,14 +27,15 @@ export function LanguageSelector({
   value, 
   onChange, 
   disabled = false,
-  className = "justify-between min-w-[80px]"
+  className = "justify-between min-w-[80px]",
+  showLabel = true
 }: LanguageSelectorProps) {
   const { t } = useHydrationSafeTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-medium">{t('common.labels.language')}</span>
+      {showLabel && <span className="text-sm font-medium">{t('common.labels.language')}</span>}
       <DropdownMenu onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
