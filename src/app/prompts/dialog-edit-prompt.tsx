@@ -1,51 +1,43 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
-import { PromptStage } from './page';
-import { createPrompt } from './actions';
-import { FormFieldCard } from '../knowledge/components/form-field-card';
-import { StageSelector } from './components/stage-selector';
-import { LanguageSelector } from '../knowledge/components/language-selector';
+import { PromptStage, Prompt } from './page';
+import { updatePrompt } from './actions';
+import { BaseFormDialog } from '@/components/shared/base-form-dialog';
+import { FormFieldCard } from '@/components/shared/form-field-card';
+import { StageSelector } from './selector-stag';
+import { LanguageSelector } from '@/components/shared/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useToast } from '@/components/ui/toast';
 
-interface AddPromptDialogProps {
+interface EditPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prompt: Prompt | null;
   stages: PromptStage[];
 }
 
 interface FormData {
   name: string;
-  stage_id: string;
   language: 'en' | 'zh' | 'vi';
   prompt: string;
   note: string;
 }
 
-export function AddPromptDialog({ 
+export function EditPromptDialog({ 
   open, 
   onOpenChange, 
+  prompt,
   stages
-}: AddPromptDialogProps) {
+}: EditPromptDialogProps) {
   const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
   
-  // 状态管理
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    stage_id: '',
     language: 'en',
     prompt: '',
     note: '',
@@ -53,26 +45,29 @@ export function AddPromptDialog({
   
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // 重置表单
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      stage_id: '',
-      language: 'en',
-      prompt: '',
-      note: '',
-    });
-  };
+  // 当 prompt 变化时更新表单数据
+  useEffect(() => {
+    if (prompt) {
+      setFormData({
+        name: prompt.name || '',
+        language: prompt.language,
+        prompt: prompt.prompt || '',
+        note: prompt.mark || '',
+      });
+    }
+  }, [prompt]);
 
   // 表单验证
   const validateForm = (): string | null => {
+    if (!prompt) return t('common.validation.select_required', { field: t('prompts.labels.stage') });
     if (!formData.name?.trim()) return t('common.validation.field_required', { field: t('prompts.fields.name') });
-    if (!formData.stage_id) return t('common.validation.select_required', { field: t('prompts.labels.stage') });
     return null;
   };
 
   // 提交表单
   const handleSubmit = async () => {
+    if (!prompt) return;
+
     const validationError = validateForm();
     if (validationError) {
       addToast('warning', validationError);
@@ -82,57 +77,53 @@ export function AddPromptDialog({
     setIsSubmitting(true);
 
     try {
-      const result = await createPrompt({
+      const result = await updatePrompt({
+        id: prompt.id,
         name: formData.name.trim(),
-        stage_id: formData.stage_id,
+        stage_id: prompt.stage_id || undefined,
         language: formData.language,
         prompt: formData.prompt.trim() || undefined,
         mark: formData.note.trim() || undefined,
       });
 
       if (result.success) {
-        addToast('success', t('common.messages.create_success'));
-        resetForm();
+        addToast('success', t('common.messages.update_success'));
         onOpenChange(false);
       } else {
-        addToast('error', result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.update_failed'));
       }
     } catch (error) {
-      addToast('error', t('common.validation.create_failed'));
+      addToast('error', t('common.validation.update_failed'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 关闭对话框时重置表单
-  useEffect(() => {
-    if (!open) {
-      resetForm();
-    }
-  }, [open]);
+  if (!prompt) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('common.patterns.add_item', { item: t('prompts.item_name') })}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Stage */}
+    <BaseFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('common.patterns.edit_item', { item: t('prompts.item_name') })}
+      onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
+      selectors={
+        <>
           <StageSelector
             stages={stages}
-            value={formData.stage_id}
-            onChange={(stageId) => setFormData(prev => ({ ...prev, stage_id: stageId }))}
+            value={prompt.stage_id || ''}
+            onChange={() => {}}
+            disabled={true}
           />
-
-          {/* Language */}
           <LanguageSelector
             value={formData.language}
             onChange={(language) => setFormData(prev => ({ ...prev, language }))}
           />
-
-          {/* Name */}
+        </>
+      }
+      formFields={
+        <>
           <FormFieldCard>
             <div className="space-y-2">
               <Label>{t('prompts.fields.name')}:</Label>
@@ -145,7 +136,6 @@ export function AddPromptDialog({
             </div>
           </FormFieldCard>
 
-          {/* Prompt */}
           <FormFieldCard>
             <div className="space-y-2">
               <Label>{t('prompts.fields.prompt')}:</Label>
@@ -158,7 +148,6 @@ export function AddPromptDialog({
             </div>
           </FormFieldCard>
 
-          {/* Note */}
           <FormFieldCard>
             <div className="space-y-2">
               <Label>{t('prompts.fields.note')}:</Label>
@@ -170,31 +159,8 @@ export function AddPromptDialog({
               />
             </div>
           </FormFieldCard>
-
-          {/* Action Buttons */}
-          <div className="flex pt-4 border-t">
-            <div className="flex-1 flex justify-center">
-              <Button 
-                variant="outline" 
-                className="w-40"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t('common.cancel')}
-              </Button>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <Button 
-                className="w-40 text-white"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? t('common.status.saving') : t('common.save')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    />
   );
 }

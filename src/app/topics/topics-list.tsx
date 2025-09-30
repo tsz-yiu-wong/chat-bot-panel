@@ -16,10 +16,10 @@ import {
   filterTopics 
 } from './utils';
 import { deleteTopic } from './actions';
-import { ManageCategoriesDialog } from './manage-categories-dialog';
-import { AddTopicDialog } from './add-topic-dialog';
-import { EditTopicDialog } from './edit-topic-dialog';
-import { ConfirmDeleteDialog } from '../knowledge/confirm-delete-dialog';
+import { ManageCategoriesDialog } from './dialog-manage-categories';
+import { AddTopicDialog } from './dialog-add-topic';
+import { EditTopicDialog } from './dialog-edit-topic';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useUser } from '@/components/user-context';
 import { hasOperationPermission } from '@/lib/permissions';

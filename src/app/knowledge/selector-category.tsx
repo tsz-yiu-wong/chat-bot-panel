@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { KnowledgeCategory } from '../page';
-import { getHydrationSafeCategoryDisplayName } from '../utils';
+import { KnowledgeCategory } from './page';
+import { getHydrationSafeCategoryDisplayName } from './utils';
 
 interface CategorySelectorProps {
   knowledgeType: 'abbreviation' | 'script';

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { PromptStage } from '../page';
+import { PromptStage } from './page';
 
 interface StageSelectorProps {
   stages: PromptStage[];

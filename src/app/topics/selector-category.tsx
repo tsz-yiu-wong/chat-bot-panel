@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { TopicCategory } from '../page';
-import { getHydrationSafeCategoryDisplayName } from '../utils';
+import { TopicCategory } from './page';
+import { getHydrationSafeCategoryDisplayName } from './utils';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 
 interface CategorySelectorProps {

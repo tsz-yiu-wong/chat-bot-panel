@@ -1,24 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 import { KnowledgeCategory, KnowledgeItem } from './page';
-import { getHydrationSafeCategoryDisplayName } from './utils';
 import { updateKnowledgeItem } from './actions';
-import { FormFieldCard } from './components/form-field-card';
-import { KnowledgeTypeSelector } from './components/knowledge-type-selector';
-import { CategorySelector } from './components/category-selector';
-import { LanguageSelector } from './components/language-selector';
+import { BaseFormDialog } from '@/components/shared/base-form-dialog';
+import { FormFieldCard } from '@/components/shared/form-field-card';
+import { KnowledgeTypeSelector } from './selector-knowledge-type';
+import { CategorySelector } from './selector-category';
+import { LanguageSelector } from '@/components/shared/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useToast } from '@/components/ui/toast';
 
@@ -32,11 +24,9 @@ interface EditKnowledgeDialogProps {
 
 interface FormData {
   language: 'en' | 'zh' | 'vi';
-  // abbreviation fields
   abbreviation?: string;
   full_form?: string;
   description?: string;
-  // script fields
   user_text?: string;
   answer_text?: string;
 }
@@ -48,10 +38,9 @@ export function EditKnowledgeDialog({
   categories, 
   currentLanguage 
 }: EditKnowledgeDialogProps) {
-  const { t, isMounted } = useHydrationSafeTranslation();
+  const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
   
-  // 状态管理
   const [formData, setFormData] = useState<FormData>({
     language: 'en',
     abbreviation: '',
@@ -61,7 +50,6 @@ export function EditKnowledgeDialog({
     answer_text: '',
   });
   
-  const [languageDropdownOpen, setLanguageDropdownOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // 当item变化时更新表单数据
@@ -77,12 +65,6 @@ export function EditKnowledgeDialog({
       });
     }
   }, [item]);
-
-  // 获取当前分类的显示名称
-  const getCategoryName = () => {
-    if (!item?.category) return '';
-    return getHydrationSafeCategoryDisplayName(item.category, currentLanguage, isMounted);
-  };
 
   // 表单验证
   const validateForm = (): string | null => {
@@ -145,40 +127,37 @@ export function EditKnowledgeDialog({
   if (!item) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('common.patterns.edit_item', { item: t('knowledge.item_name') })}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Knowledge Type (Disabled) */}
+    <BaseFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('common.patterns.edit_item', { item: t('knowledge.item_name') })}
+      onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
+      selectors={
+        <>
           <KnowledgeTypeSelector
             value={item.knowledge_type}
-            onChange={() => {}} // 禁用状态，不需要处理变化
+            onChange={() => {}}
             disabled={true}
           />
-
-          {/* Category (Disabled) */}
           <CategorySelector
             knowledgeType={item.knowledge_type}
             categories={categories}
             value={item.category_id || ''}
-            onChange={() => {}} // 禁用状态，不需要处理变化
+            onChange={() => {}}
             currentLanguage={currentLanguage}
             disabled={true}
           />
-
-          {/* Language */}
           <LanguageSelector
             value={formData.language}
             onChange={(language) => setFormData(prev => ({ ...prev, language }))}
           />
-
-          {/* Dynamic Fields based on Knowledge Type */}
+        </>
+      }
+      formFields={
+        <>
           {item.knowledge_type === 'abbreviation' ? (
-            // Abbreviation Fields - 每个字段一个卡片
-            <div className="space-y-4">
+            <>
               <FormFieldCard>
                 <div className="space-y-2">
                   <Label>{t('knowledge.fields.abbreviation')}:</Label>
@@ -214,10 +193,9 @@ export function EditKnowledgeDialog({
                   />
                 </div>
               </FormFieldCard>
-            </div>
+            </>
           ) : (
-            // Script Fields - 每个字段一个卡片
-            <div className="space-y-4">
+            <>
               <FormFieldCard>
                 <div className="space-y-2">
                   <Label>{t('knowledge.fields.user_text')}:</Label>
@@ -241,33 +219,10 @@ export function EditKnowledgeDialog({
                   />
                 </div>
               </FormFieldCard>
-            </div>
+            </>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex pt-4 border-t">
-            <div className="flex-1 flex justify-center">
-              <Button 
-                variant="outline" 
-                className="w-40"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t('common.cancel')}
-              </Button>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <Button 
-                className="w-40 text-white"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? t('common.status.saving') : t('common.save')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    />
   );
 }

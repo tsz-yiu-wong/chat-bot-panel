@@ -1,23 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 import { Topic, TopicCategory, TopicSubcategory } from './page';
 import { updateTopic } from './actions';
-import { CategorySelector } from './components/category-selector';
-import { SubcategorySelector } from './components/subcategory-selector';
-import { LanguageSelector } from '../knowledge/components/language-selector';
-import { FormFieldCard } from '../knowledge/components/form-field-card';
+import { BaseFormDialog } from '@/components/shared/base-form-dialog';
+import { CategorySelector } from './selector-category';
+import { SubcategorySelector } from './selector-subcategory';
+import { LanguageSelector } from '@/components/shared/language-selector';
+import { FormFieldCard } from '@/components/shared/form-field-card';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useToast } from '@/components/ui/toast';
 
@@ -48,7 +41,6 @@ export function EditTopicDialog({
   const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
   
-  // 状态管理
   const [formData, setFormData] = useState<FormData>({
     category_id: '',
     subcategory_id: '',
@@ -75,7 +67,7 @@ export function EditTopicDialog({
     setFormData(prev => ({
       ...prev,
       category_id: categoryId,
-      subcategory_id: '', // 重置子分类选择
+      subcategory_id: '',
     }));
   };
 
@@ -122,22 +114,21 @@ export function EditTopicDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{t('common.patterns.edit_item', { item: t('topics.item_name') })}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 overflow-y-auto flex-1">
-          {/* Category 选择器 */}
+    <BaseFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('common.patterns.edit_item', { item: t('topics.item_name') })}
+      onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
+      scrollableContent={true}
+      selectors={
+        <>
           <CategorySelector
             value={formData.category_id}
             onChange={handleCategoryChange}
             categories={categories}
             currentLanguage={currentLanguage}
           />
-
-          {/* Subcategory 选择器 */}
           <SubcategorySelector
             value={formData.subcategory_id}
             onChange={(value: string) => setFormData(prev => ({ ...prev, subcategory_id: value }))}
@@ -145,50 +136,25 @@ export function EditTopicDialog({
             selectedCategoryId={formData.category_id}
             currentLanguage={currentLanguage}
           />
-
-          {/* Language 选择器 */}
           <LanguageSelector
             value={formData.language}
             onChange={(value: 'en' | 'zh' | 'vi') => setFormData(prev => ({ ...prev, language: value }))}
           />
-
-          {/* Content 输入 */}
-          <FormFieldCard>
-            <div className="space-y-2">
-              <Label>{t('topics.fields.content')}:</Label>
-              <Textarea
-                value={formData.content}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                placeholder={t('common.placeholders.enter_field', { field: t('topics.fields.content') })}
-                className="min-h-[120px] resize-none bg-muted"
-              />
-            </div>
-          </FormFieldCard>
-        </div>
-
-        {/* 底部按钮 */}
-        <div className="flex pt-4 border-t">
-          <div className="flex-1 flex justify-center">
-            <Button 
-              variant="outline" 
-              className="w-40"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              {t('common.cancel')}
-            </Button>
+        </>
+      }
+      formFields={
+        <FormFieldCard>
+          <div className="space-y-2">
+            <Label>{t('topics.fields.content')}:</Label>
+            <Textarea
+              value={formData.content}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              placeholder={t('common.placeholders.enter_field', { field: t('topics.fields.content') })}
+              className="min-h-[120px] resize-none bg-muted"
+            />
           </div>
-          <div className="flex-1 flex justify-center">
-            <Button 
-              className="w-40 text-white"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? t('common.status.saving') : t('common.save')}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </FormFieldCard>
+      }
+    />
   );
 }

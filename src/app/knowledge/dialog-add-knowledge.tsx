@@ -1,24 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 import { KnowledgeCategory } from './page';
-import { getHydrationSafeCategoryDisplayName } from './utils';
 import { createKnowledgeItem } from './actions';
-import { FormFieldCard } from './components/form-field-card';
-import { KnowledgeTypeSelector } from './components/knowledge-type-selector';
-import { CategorySelector } from './components/category-selector';
-import { LanguageSelector } from './components/language-selector';
+import { BaseFormDialog } from '@/components/shared/base-form-dialog';
+import { FormFieldCard } from '@/components/shared/form-field-card';
+import { KnowledgeTypeSelector } from './selector-knowledge-type';
+import { CategorySelector } from './selector-category';
+import { LanguageSelector } from '@/components/shared/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useToast } from '@/components/ui/toast';
 
@@ -33,11 +25,9 @@ interface FormData {
   knowledge_type: 'abbreviation' | 'script';
   category_id: string;
   language: 'en' | 'zh' | 'vi';
-  // abbreviation fields
   abbreviation?: string;
   full_form?: string;
   description?: string;
-  // script fields
   user_text?: string;
   answer_text?: string;
 }
@@ -48,12 +38,11 @@ export function AddKnowledgeDialog({
   categories, 
   currentLanguage 
 }: AddKnowledgeDialogProps) {
-  const { t, isMounted } = useHydrationSafeTranslation();
+  const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
   
-  // 状态管理
   const [formData, setFormData] = useState<FormData>({
-    knowledge_type: 'abbreviation', // 默认abbreviation
+    knowledge_type: 'abbreviation',
     category_id: '',
     language: 'en',
     abbreviation: '',
@@ -63,27 +52,7 @@ export function AddKnowledgeDialog({
     answer_text: '',
   });
   
-  const [typeDropdownOpen, setTypeDropdownOpen] = useState<boolean>(false);
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState<boolean>(false);
-  const [languageDropdownOpen, setLanguageDropdownOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  // 根据选中类型获取可用分类
-  const availableCategories = categories.filter(cat => 
-    cat.knowledge_type === formData.knowledge_type
-  ).map(cat => ({
-    ...cat,
-    displayName: getHydrationSafeCategoryDisplayName(cat, currentLanguage, isMounted)
-  }));
-
-  // 当类型改变时重置分类选择
-  const handleTypeChange = (newType: 'abbreviation' | 'script') => {
-    setFormData(prev => ({
-      ...prev,
-      knowledge_type: newType,
-      category_id: '', // 重置分类选择
-    }));
-  };
 
   // 重置表单
   const resetForm = () => {
@@ -99,11 +68,13 @@ export function AddKnowledgeDialog({
     });
   };
 
-  // 获取选中分类的显示名称
-  const getSelectedCategoryName = () => {
-    if (!formData.category_id) return 'Select category';
-    const category = availableCategories.find(cat => cat.id === formData.category_id);
-    return category?.displayName || 'Select category';
+  // 当类型改变时重置分类选择
+  const handleTypeChange = (newType: 'abbreviation' | 'script') => {
+    setFormData(prev => ({
+      ...prev,
+      knowledge_type: newType,
+      category_id: '',
+    }));
   };
 
   // 表单验证
@@ -170,20 +141,18 @@ export function AddKnowledgeDialog({
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('common.patterns.add_item', { item: t('knowledge.item_name') })}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Knowledge Type */}
+    <BaseFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('common.patterns.add_item', { item: t('knowledge.item_name') })}
+      onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
+      selectors={
+        <>
           <KnowledgeTypeSelector
             value={formData.knowledge_type}
             onChange={handleTypeChange}
           />
-
-          {/* Category */}
           <CategorySelector
             knowledgeType={formData.knowledge_type}
             categories={categories}
@@ -191,17 +160,16 @@ export function AddKnowledgeDialog({
             onChange={(categoryId) => setFormData(prev => ({ ...prev, category_id: categoryId }))}
             currentLanguage={currentLanguage}
           />
-
-          {/* Language */}
           <LanguageSelector
             value={formData.language}
             onChange={(language) => setFormData(prev => ({ ...prev, language }))}
           />
-
-          {/* Dynamic Fields based on Knowledge Type */}
+        </>
+      }
+      formFields={
+        <>
           {formData.knowledge_type === 'abbreviation' ? (
-            // Abbreviation Fields - 每个字段一个卡片
-            <div className="space-y-4">
+            <>
               <FormFieldCard>
                 <div className="space-y-2">
                   <Label>{t('knowledge.fields.abbreviation')}:</Label>
@@ -237,10 +205,9 @@ export function AddKnowledgeDialog({
                   />
                 </div>
               </FormFieldCard>
-            </div>
+            </>
           ) : (
-            // Script Fields - 每个字段一个卡片
-            <div className="space-y-4">
+            <>
               <FormFieldCard>
                 <div className="space-y-2">
                   <Label>{t('knowledge.fields.user_text')}:</Label>
@@ -264,33 +231,10 @@ export function AddKnowledgeDialog({
                   />
                 </div>
               </FormFieldCard>
-            </div>
+            </>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex pt-4 border-t">
-            <div className="flex-1 flex justify-center">
-              <Button 
-                variant="outline" 
-                className="w-40"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                {t('common.cancel')}
-              </Button>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <Button 
-                className="w-40 text-white"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? t('common.status.saving') : t('common.save')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    />
   );
 }
