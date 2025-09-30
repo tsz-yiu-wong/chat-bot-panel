@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
 
 import { TopicCategory, TopicSubcategory, Topic } from './page';
 import { 
@@ -20,6 +21,8 @@ import { AddTopicDialog } from './add-topic-dialog';
 import { EditTopicDialog } from './edit-topic-dialog';
 import { ConfirmDeleteDialog } from '../knowledge/confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useUser } from '@/components/user-context';
+import { hasOperationPermission } from '@/lib/permissions';
 
 interface TopicsListProps {
   initialCategories: TopicCategory[];
@@ -34,6 +37,12 @@ export function TopicsList({
 }: TopicsListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t, isMounted, currentLanguage } = useHydrationSafeTranslation();
+  
+  // 获取用户权限
+  const { userRole } = useUser();
+  const { addToast } = useToast();
+  const canEdit = userRole ? hasOperationPermission(userRole, 'edit') : false;
+  const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -159,10 +168,11 @@ export function TopicsList({
     const result = await deleteTopic(selectedTopic.id);
 
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeleteTopicOpen(false);
       setSelectedTopic(null);
     } else {
-      alert(result.error || 'Failed to delete topic');
+      addToast('error', result.error || t('common.messages.delete_failed'));
     }
   };
 
@@ -347,24 +357,30 @@ export function TopicsList({
                   </div>
                   
                   {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(topic)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 hover:bg-red-50 group"
-                      onClick={() => handleDelete(topic)}
-                    >
-                      <Trash2 className="h-4 w-4 group-hover:text-red-600" />
-                    </Button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canEdit && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(topic)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-red-50 group"
+                          onClick={() => handleDelete(topic)}
+                        >
+                          <Trash2 className="h-4 w-4 group-hover:text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               

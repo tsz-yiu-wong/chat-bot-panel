@@ -31,6 +31,7 @@ import {
 } from './actions';
 import { ConfirmDeleteDialog } from '../knowledge/confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface ManageCategoriesDialogProps {
   open: boolean;
@@ -55,6 +56,7 @@ export function ManageCategoriesDialog({
   currentLanguage 
 }: ManageCategoriesDialogProps) {
   const { t, isMounted } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   
   // null 表示编辑 Categories，否则表示编辑选中 Category 的 Subcategories
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export function ManageCategoriesDialog({
     if (isAddingNew) {
       // 添加新项
       if (!newItemData.name_en.trim() || !newItemData.name_zh.trim() || !newItemData.name_vi.trim()) {
-        alert(t('common.validation.all_required', { field: 'language names' }));
+        addToast('warning', t('common.validation.all_required', { field: 'language names' }));
         return;
       }
       
@@ -159,9 +161,10 @@ export function ManageCategoriesDialog({
       }
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         cancelEdit();
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } else {
       // 更新现有项 - 一次性更新所有三个语言字段
@@ -169,7 +172,7 @@ export function ManageCategoriesDialog({
 
       // 验证至少有一个语言字段有值
       if (!editingData.name_zh.trim() && !editingData.name_en.trim() && !editingData.name_vi.trim()) {
-        alert(t('common.validation.all_required', { field: 'language names' }));
+        addToast('warning', t('common.validation.all_required', { field: 'language names' }));
         return;
       }
 
@@ -194,9 +197,10 @@ export function ManageCategoriesDialog({
       }
 
       if (result.success) {
+        addToast('success', t('common.messages.update_success'));
         cancelEdit();
       } else {
-        alert(result.error || t('common.validation.update_failed'));
+        addToast('error', result.error || t('common.validation.update_failed'));
       }
     }
   };
@@ -213,9 +217,10 @@ export function ManageCategoriesDialog({
     }
     
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeleteConfirm(null);
     } else {
-      alert(result.error || t('common.validation.delete_failed'));
+      addToast('error', result.error || t('common.validation.delete_failed'));
     }
   };
 

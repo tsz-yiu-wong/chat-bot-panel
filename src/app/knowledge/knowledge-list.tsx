@@ -5,14 +5,14 @@ import { Search, Plus, Edit, Trash2, Filter, ChevronDown, Settings } from 'lucid
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/toast';
 
 import { KnowledgeCategory, KnowledgeItem } from './page';
 import { getCategoryDisplayName, getHydrationSafeCategoryDisplayName, filterKnowledgeItems } from './utils';
@@ -22,6 +22,8 @@ import { AddKnowledgeDialog } from './add-knowledge-dialog';
 import { EditKnowledgeDialog } from './edit-knowledge-dialog';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useUser } from '@/components/user-context';
+import { hasOperationPermission } from '@/lib/permissions';
 
 interface KnowledgeListProps {
   initialCategories: KnowledgeCategory[];
@@ -31,6 +33,12 @@ interface KnowledgeListProps {
 export function KnowledgeList({ initialCategories, initialItems }: KnowledgeListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t, isMounted, currentLanguage } = useHydrationSafeTranslation();
+  
+  // 获取用户权限
+  const { userRole } = useUser();
+  const { addToast } = useToast();
+  const canEdit = userRole ? hasOperationPermission(userRole, 'edit') : false;
+  const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -111,10 +119,11 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
     const result = await deleteKnowledgeItem(selectedItem.id);
 
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeleteKnowledgeOpen(false);
       setSelectedItem(null);
     } else {
-      alert(result.error || 'Failed to delete knowledge item');
+      addToast('error', result.error || t('common.messages.delete_failed'));
     }
   };
 
@@ -230,24 +239,30 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
                         {item.language}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 hover:bg-red-50 group"
-                        onClick={() => handleDelete(item)}
-                      >
-                        <Trash2 className="h-4 w-4 group-hover:text-red-600" />
-                      </Button>
-                    </div>
+                    {(canEdit || canDelete) && (
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 hover:bg-red-50 group"
+                            onClick={() => handleDelete(item)}
+                          >
+                            <Trash2 className="h-4 w-4 group-hover:text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   {/* 第二行：缩写 -> 全写 | 描述 */}
@@ -276,24 +291,30 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
                         {item.language}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 hover:bg-red-50 group"
-                        onClick={() => handleDelete(item)}
-                      >
-                        <Trash2 className="h-4 w-4 group-hover:text-red-600" />
-                      </Button>
-                    </div>
+                    {(canEdit || canDelete) && (
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 hover:bg-red-50 group"
+                            onClick={() => handleDelete(item)}
+                          >
+                            <Trash2 className="h-4 w-4 group-hover:text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   {/* 第二行：User: {user text} */}

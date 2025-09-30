@@ -12,12 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 import { KnowledgeCategory } from './page';
 import { getHydrationSafeCategoryDisplayName } from './utils';
@@ -29,6 +23,9 @@ import {
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { KnowledgeTypeSelector } from './components/knowledge-type-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
+import { useUser } from '@/components/user-context';
+import { hasOperationPermission } from '@/lib/permissions';
 
 interface ManageCategoriesDialogProps {
   open: boolean;
@@ -51,6 +48,11 @@ export function ManageCategoriesDialog({
   currentLanguage 
 }: ManageCategoriesDialogProps) {
   const { t, isMounted } = useHydrationSafeTranslation();
+  const { userRole } = useUser();
+  const { addToast } = useToast();
+  const canEdit = userRole ? hasOperationPermission(userRole, 'edit') : false;
+  const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
+  
   const [selectedType, setSelectedType] = useState<'abbreviation' | 'script'>('script');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<EditingCategory | null>(null);
@@ -99,7 +101,7 @@ export function ManageCategoriesDialog({
     if (isAddingNew) {
       // 添加新分类
       if (!newCategoryData.name_en.trim() || !newCategoryData.name_zh.trim() || !newCategoryData.name_vi.trim()) {
-        alert(t('common.validation.all_required', { field: 'language names' }));
+        addToast('warning', t('common.validation.all_required', { field: 'language names' }));
         return;
       }
       
@@ -111,20 +113,21 @@ export function ManageCategoriesDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         cancelEdit();
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } else {
       // 更新现有分类 - 一次性更新所有三个语言字段
       if (!editingData) {
-        alert('请输入分类名称');
+        addToast('warning', '请输入分类名称');
         return;
       }
 
       // 验证至少有一个语言字段有值
       if (!editingData.name_zh?.trim() && !editingData.name_en?.trim() && !editingData.name_vi?.trim()) {
-        alert(t('common.validation.field_required', { 
+        addToast('warning', t('common.validation.field_required', { 
           field: selectedType === 'abbreviation' ? t('knowledge.labels.category') : t('knowledge.labels.scene') 
         }));
         return;
@@ -139,10 +142,11 @@ export function ManageCategoriesDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.update_success'));
         setEditingId(null);
         setEditingData(null);
       } else {
-        alert(result.error || t('common.validation.update_failed'));
+        addToast('error', result.error || t('common.validation.update_failed'));
       }
     }
   };
@@ -154,9 +158,10 @@ export function ManageCategoriesDialog({
     const result = await deleteKnowledgeCategory(deleteConfirm.id);
     
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeleteConfirm(null);
     } else {
-      alert(result.error || t('common.validation.delete_failed'));
+      addToast('error', result.error || t('common.validation.delete_failed'));
     }
   };
 
@@ -230,22 +235,28 @@ export function ManageCategoriesDialog({
                           <span className="text-sm font-medium">
                             {getHydrationSafeCategoryDisplayName(category, currentLanguage, isMounted)}
                           </span>
-                          <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => startEdit(category)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="hover:bg-red-50 group"
-                              onClick={() => setDeleteConfirm({
-                                id: category.id,
-                                name: getHydrationSafeCategoryDisplayName(category, currentLanguage, isMounted)
-                              })}
-                            >
-                              <Trash2 className="h-4 w-4 group-hover:text-red-600" />
-                            </Button>
-                          </div>
+                          {(canEdit || canDelete) && (
+                            <div className="flex gap-1">
+                              {canEdit && (
+                                <Button size="icon" variant="ghost" onClick={() => startEdit(category)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {canDelete && (
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="hover:bg-red-50 group"
+                                  onClick={() => setDeleteConfirm({
+                                    id: category.id,
+                                    name: getHydrationSafeCategoryDisplayName(category, currentLanguage, isMounted)
+                                  })}
+                                >
+                                  <Trash2 className="h-4 w-4 group-hover:text-red-600" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

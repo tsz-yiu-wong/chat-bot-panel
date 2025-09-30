@@ -19,6 +19,7 @@ import { SubcategorySelector } from './components/subcategory-selector';
 import { LanguageSelector } from '../knowledge/components/language-selector';
 import { FormFieldCard } from '../knowledge/components/form-field-card';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface AddTopicDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function AddTopicDialog({
   currentLanguage 
 }: AddTopicDialogProps) {
   const { t } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   
   // 状态管理
   const [formData, setFormData] = useState<FormData>({
@@ -85,7 +87,7 @@ export function AddTopicDialog({
   const handleSubmit = async () => {
     const validationError = validateForm();
     if (validationError) {
-      alert(validationError);
+      addToast('warning', validationError);
       return;
     }
 
@@ -100,13 +102,14 @@ export function AddTopicDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         resetForm();
         onOpenChange(false);
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } catch (error) {
-      alert(t('common.validation.create_failed'));
+      addToast('error', t('common.validation.create_failed'));
     } finally {
       setIsSubmitting(false);
     }

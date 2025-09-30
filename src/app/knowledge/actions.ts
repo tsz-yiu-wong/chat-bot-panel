@@ -78,20 +78,25 @@ export async function updateKnowledgeItem(data: UpdateKnowledgeItemData) {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedItem, error } = await supabase
+    const { data: updatedItems, error } = await supabase
       .from('knowledge_items')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新知识库项目失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedItems || updatedItems.length === 0) {
+      console.error('更新知识库项目失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/knowledge');
-    return { success: true, data: updatedItem };
+    return { success: true, data: updatedItems[0] };
   } catch (error) {
     console.error('更新知识库项目异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -105,14 +110,21 @@ export async function deleteKnowledgeItem(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('knowledge_items')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除知识库项目失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除知识库项目失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/knowledge');
@@ -178,20 +190,25 @@ export async function updateKnowledgeCategory(data: {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedCategory, error } = await supabase
+    const { data: updatedCategories, error } = await supabase
       .from('knowledge_categories')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新知识库分类失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedCategories || updatedCategories.length === 0) {
+      console.error('更新知识库分类失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/knowledge');
-    return { success: true, data: updatedCategory };
+    return { success: true, data: updatedCategories[0] };
   } catch (error) {
     console.error('更新知识库分类异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -205,14 +222,21 @@ export async function deleteKnowledgeCategory(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('knowledge_categories')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除知识库分类失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除知识库分类失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/knowledge');

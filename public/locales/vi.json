@@ -6,8 +6,7 @@
     "prompts": "Gợi ý",
     "knowledge": "Kiến thức",
     "topics": "Chủ đề",
-    "test_chat": "Kiểm tra",
-    "ui_components": "UI",
+    "testing": "Kiểm tra",
     "permission": "Quyền hạn",
     "settings": "Cài đặt"
   },
@@ -73,7 +72,11 @@
       "no_results": "Không tìm thấy {{module}} phù hợp",
       "no_items": "Không có {{items}}",
       "editing": "Đang chỉnh sửa: {{items}}",
-      "select_first": "Vui lòng chọn {{entity}} trước"
+      "select_first": "Vui lòng chọn {{entity}} trước",
+      "create_success": "Tạo thành công",
+      "update_success": "Cập nhật thành công",
+      "delete_success": "Xóa thành công",
+      "delete_failed": "Xóa thất bại"
     },
     "placeholders": {
       "enter_field": "Nhập {{field}}",

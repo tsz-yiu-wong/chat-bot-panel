@@ -23,8 +23,7 @@ export const MENU_CONFIG: Record<string, { key: string; icon: string; label: str
   '/knowledge': { key: 'knowledge', icon: 'BookOpen', label: 'Knowledge', labelKey: 'sidebar.knowledge' },
   '/topics': { key: 'topics', icon: 'FileText', label: 'Topics', labelKey: 'sidebar.topics' },
   '/settings': { key: 'settings', icon: 'Settings', label: 'Settings', labelKey: 'sidebar.settings' },
-  '/test-chat': { key: 'test_chat', icon: 'FlaskConical', label: 'Test Chat', labelKey: 'sidebar.test_chat' },
-  '/ui': { key: 'ui_components', icon: 'LayoutDashboard', label: 'UI Components', labelKey: 'sidebar.ui_components' },
+  '/testing': { key: 'testing', icon: 'FlaskConical', label: 'Testing', labelKey: 'sidebar.testing' },
   '/permission': { key: 'permission', icon: 'ShieldQuestion', label: 'Permission', labelKey: 'sidebar.permission' },
 };
 
@@ -54,8 +53,7 @@ const ADMIN_MENU_ITEMS: string[] = [
 
 const SUPER_ADMIN_MENU_ITEMS: string[] = [
   ...ADMIN_MENU_ITEMS,
-  '/test-chat',
-  '/ui',
+  '/testing',
   '/permission',
 ];
 
@@ -129,4 +127,47 @@ export function getMenuItems(userRole: UserRole): Array<{ key: string; href: str
     href,
     ...MENU_CONFIG[href],
   }));
+}
+
+/**
+ * 操作权限定义
+ * 定义不同角色对数据的增删改查权限
+ */
+export const OPERATION_PERMISSIONS: Record<UserRole, {
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}> = {
+  user: {
+    canCreate: true,   // user 可以添加数据
+    canEdit: false,    // user 不能编辑数据
+    canDelete: false,  // user 不能删除数据
+  },
+  admin: {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+  },
+  super_admin: {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+  },
+};
+
+/**
+ * 检查用户是否有执行指定操作的权限
+ *
+ * @param {UserRole} role - 用户角色
+ * @param {string} operation - 操作类型：'create', 'edit', 'delete'
+ * @returns {boolean} - 是否有权限
+ */
+export function hasOperationPermission(role: UserRole, operation: 'create' | 'edit' | 'delete'): boolean {
+  const permissions = OPERATION_PERMISSIONS[role];
+  switch (operation) {
+    case 'create': return permissions.canCreate;
+    case 'edit': return permissions.canEdit;
+    case 'delete': return permissions.canDelete;
+    default: return false;
+  }
 }

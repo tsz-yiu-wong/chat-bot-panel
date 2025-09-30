@@ -18,6 +18,7 @@ import { FormFieldCard } from '../knowledge/components/form-field-card';
 import { StageSelector } from './components/stage-selector';
 import { LanguageSelector } from '../knowledge/components/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface AddPromptDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function AddPromptDialog({
   stages
 }: AddPromptDialogProps) {
   const { t } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   
   // 状态管理
   const [formData, setFormData] = useState<FormData>({
@@ -73,7 +75,7 @@ export function AddPromptDialog({
   const handleSubmit = async () => {
     const validationError = validateForm();
     if (validationError) {
-      alert(validationError);
+      addToast('warning', validationError);
       return;
     }
 
@@ -89,13 +91,14 @@ export function AddPromptDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         resetForm();
         onOpenChange(false);
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } catch (error) {
-      alert(t('common.validation.create_failed'));
+      addToast('error', t('common.validation.create_failed'));
     } finally {
       setIsSubmitting(false);
     }

@@ -61,20 +61,25 @@ export async function updatePrompt(data: UpdatePromptData) {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedPrompt, error } = await supabase
+    const { data: updatedPrompts, error } = await supabase
       .from('prompts')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新 Prompt 失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedPrompts || updatedPrompts.length === 0) {
+      console.error('更新 Prompt 失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/prompts');
-    return { success: true, data: updatedPrompt };
+    return { success: true, data: updatedPrompts[0] };
   } catch (error) {
     console.error('更新 Prompt 异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -88,14 +93,21 @@ export async function deletePrompt(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('prompts')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除 Prompt 失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除 Prompt 失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/prompts');
@@ -150,20 +162,25 @@ export async function updateStage(data: { id: string; name: string }) {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedStage, error } = await supabase
+    const { data: updatedStages, error } = await supabase
       .from('prompt_stages')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新 Stage 失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedStages || updatedStages.length === 0) {
+      console.error('更新 Stage 失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/prompts');
-    return { success: true, data: updatedStage };
+    return { success: true, data: updatedStages[0] };
   } catch (error) {
     console.error('更新 Stage 异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -177,14 +194,21 @@ export async function deleteStage(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('prompt_stages')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除 Stage 失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除 Stage 失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/prompts');

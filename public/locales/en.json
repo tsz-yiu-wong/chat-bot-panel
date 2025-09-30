@@ -6,8 +6,7 @@
     "prompts": "Prompts",
     "knowledge": "Knowledge",
     "topics": "Topics",
-    "test_chat": "Testing",
-    "ui_components": "UI",
+    "testing": "Testing",
     "permission": "Permission",
     "settings": "Settings"
   },
@@ -73,7 +72,11 @@
       "no_results": "No matching {{module}} found",
       "no_items": "No {{items}}",
       "editing": "Editing: {{items}}",
-      "select_first": "Please select {{entity}} first"
+      "select_first": "Please select {{entity}} first",
+      "create_success": "Created successfully",
+      "update_success": "Updated successfully",
+      "delete_success": "Deleted successfully",
+      "delete_failed": "Failed to delete"
     },
     "placeholders": {
       "enter_field": "Enter {{field}}",

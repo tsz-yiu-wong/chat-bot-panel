@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import I18nProvider from '@/components/i18n-provider';
 import { AppShell } from '@/components/layout/app-shell';
 import { UserProvider } from '@/components/user-context';
+import { ToastProvider } from '@/components/ui/toast';
 import { getCurrentUser, type UserProfile } from '@/lib/auth';
 import { handleError } from '@/lib/error-handler';
 
@@ -46,11 +47,13 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <UserProvider initialRole={userRole} initialProfile={userProfile}>
-              <div className="relative flex h-screen flex-col overflow-hidden">
-                <AppShell>{children}</AppShell>
-              </div>
-            </UserProvider>
+            <ToastProvider>
+              <UserProvider initialRole={userRole} initialProfile={userProfile}>
+                <div className="relative flex h-screen flex-col overflow-hidden">
+                  <AppShell>{children}</AppShell>
+                </div>
+              </UserProvider>
+            </ToastProvider>
           </ThemeProvider>
         </I18nProvider>
       </body>

@@ -6,8 +6,7 @@
     "prompts": "提示词",
     "knowledge": "知识库",
     "topics": "话题库",
-    "test_chat": "聊天测试",
-    "ui_components": "UI",
+    "testing": "测试",
     "permission": "权限管理",
     "settings": "设置"
   },
@@ -73,7 +72,11 @@
       "no_results": "暂无匹配的{{module}}项目",
       "no_items": "暂无{{items}}",
       "editing": "正在编辑：{{items}}",
-      "select_first": "请先选择{{entity}}"
+      "select_first": "请先选择{{entity}}",
+      "create_success": "创建成功",
+      "update_success": "更新成功",
+      "delete_success": "删除成功",
+      "delete_failed": "删除失败"
     },
     "placeholders": {
       "enter_field": "请输入{{field}}",

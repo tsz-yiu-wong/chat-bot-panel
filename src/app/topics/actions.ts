@@ -60,20 +60,25 @@ export async function updateTopicCategory(data: {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedCategory, error } = await supabase
+    const { data: updatedCategories, error } = await supabase
       .from('topic_categories')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新话题分类失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedCategories || updatedCategories.length === 0) {
+      console.error('更新话题分类失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/topics');
-    return { success: true, data: updatedCategory };
+    return { success: true, data: updatedCategories[0] };
   } catch (error) {
     console.error('更新话题分类异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -87,14 +92,21 @@ export async function deleteTopicCategory(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('topic_categories')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除话题分类失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除话题分类失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/topics');
@@ -164,20 +176,25 @@ export async function updateTopicSubcategory(data: {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedSubcategory, error } = await supabase
+    const { data: updatedSubcategories, error } = await supabase
       .from('topic_subcategories')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新话题子分类失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedSubcategories || updatedSubcategories.length === 0) {
+      console.error('更新话题子分类失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/topics');
-    return { success: true, data: updatedSubcategory };
+    return { success: true, data: updatedSubcategories[0] };
   } catch (error) {
     console.error('更新话题子分类异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -191,14 +208,21 @@ export async function deleteTopicSubcategory(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('topic_subcategories')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除话题子分类失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除话题子分类失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/topics');
@@ -268,20 +292,25 @@ export async function updateTopic(data: {
     }
 
     const { id, ...updateData } = data;
-    const { data: updatedTopic, error } = await supabase
+    const { data: updatedTopics, error } = await supabase
       .from('topics')
       .update(updateData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('更新话题失败:', error);
       return { success: false, error: '更新失败，请稍后重试' };
     }
 
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!updatedTopics || updatedTopics.length === 0) {
+      console.error('更新话题失败: 权限不足或数据不存在');
+      return { success: false, error: '更新失败，权限不足' };
+    }
+
     revalidatePath('/topics');
-    return { success: true, data: updatedTopic };
+    return { success: true, data: updatedTopics[0] };
   } catch (error) {
     console.error('更新话题异常:', error);
     return { success: false, error: '系统错误，请稍后重试' };
@@ -295,14 +324,21 @@ export async function deleteTopic(id: string) {
   try {
     const supabase = await createServerActionClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('topics')
       .update({ is_deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('删除话题失败:', error);
       return { success: false, error: '删除失败，请稍后重试' };
+    }
+
+    // 检查是否真的有数据被更新（权限不足时 data 为空数组）
+    if (!data || data.length === 0) {
+      console.error('删除话题失败: 权限不足或数据不存在');
+      return { success: false, error: '删除失败，权限不足' };
     }
 
     revalidatePath('/topics');

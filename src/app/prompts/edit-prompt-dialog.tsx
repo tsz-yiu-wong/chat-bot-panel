@@ -18,6 +18,7 @@ import { FormFieldCard } from '../knowledge/components/form-field-card';
 import { StageSelector } from './components/stage-selector';
 import { LanguageSelector } from '../knowledge/components/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface EditPromptDialogProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function EditPromptDialog({
   stages
 }: EditPromptDialogProps) {
   const { t } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   
   // 状态管理
   const [formData, setFormData] = useState<FormData>({
@@ -76,7 +78,7 @@ export function EditPromptDialog({
 
     const validationError = validateForm();
     if (validationError) {
-      alert(validationError);
+      addToast('warning', validationError);
       return;
     }
 
@@ -93,12 +95,13 @@ export function EditPromptDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.update_success'));
         onOpenChange(false);
       } else {
-        alert(result.error || t('common.validation.update_failed'));
+        addToast('error', result.error || t('common.validation.update_failed'));
       }
     } catch (error) {
-      alert(t('common.validation.update_failed'));
+      addToast('error', t('common.validation.update_failed'));
     } finally {
       setIsSubmitting(false);
     }

@@ -21,6 +21,7 @@ import {
 } from './actions';
 import { ConfirmDeleteDialog } from '../knowledge/confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface ManageStagesDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function ManageStagesDialog({
   stages
 }: ManageStagesDialogProps) {
   const { t } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<EditingStage | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -75,7 +77,7 @@ export function ManageStagesDialog({
     if (isAddingNew) {
       // 添加新 Stage
       if (!newStageName.trim()) {
-        alert(t('common.validation.field_required', { field: t('prompts.labels.stage') }));
+        addToast('warning', t('common.validation.field_required', { field: t('prompts.labels.stage') }));
         return;
       }
       
@@ -84,15 +86,16 @@ export function ManageStagesDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         setIsAddingNew(false);
         setNewStageName('');
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } else {
       // 更新现有 Stage
       if (!editingData || !editingData.name.trim()) {
-        alert(t('common.validation.field_required', { field: t('prompts.labels.stage') }));
+        addToast('warning', t('common.validation.field_required', { field: t('prompts.labels.stage') }));
         return;
       }
 
@@ -102,10 +105,11 @@ export function ManageStagesDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.update_success'));
         setEditingId(null);
         setEditingData(null);
       } else {
-        alert(result.error || t('common.validation.update_failed'));
+        addToast('error', result.error || t('common.validation.update_failed'));
       }
     }
   };
@@ -117,9 +121,10 @@ export function ManageStagesDialog({
     const result = await deleteStage(deleteConfirm.id);
     
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeleteConfirm(null);
     } else {
-      alert(result.error || t('common.validation.delete_failed'));
+      addToast('error', result.error || t('common.validation.delete_failed'));
     }
   };
 

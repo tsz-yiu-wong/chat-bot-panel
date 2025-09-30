@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/toast';
 
 import { PromptStage, Prompt } from './page';
 import { filterPrompts } from './utils';
@@ -21,6 +22,8 @@ import { AddPromptDialog } from './add-prompt-dialog';
 import { EditPromptDialog } from './edit-prompt-dialog';
 import { ConfirmDeleteDialog } from '../knowledge/confirm-delete-dialog';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useUser } from '@/components/user-context';
+import { hasOperationPermission } from '@/lib/permissions';
 
 interface PromptsListProps {
   initialStages: PromptStage[];
@@ -30,6 +33,12 @@ interface PromptsListProps {
 export function PromptsList({ initialStages, initialPrompts }: PromptsListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t } = useHydrationSafeTranslation();
+  
+  // 获取用户权限
+  const { userRole } = useUser();
+  const { addToast } = useToast();
+  const canEdit = userRole ? hasOperationPermission(userRole, 'edit') : false;
+  const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
   const [selectedStage, setSelectedStage] = useState<string>('all');
@@ -82,10 +91,11 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
     const result = await deletePrompt(selectedPrompt.id);
 
     if (result.success) {
+      addToast('success', t('common.messages.delete_success'));
       setDeletePromptOpen(false);
       setSelectedPrompt(null);
     } else {
-      alert(result.error || 'Failed to delete prompt');
+      addToast('error', result.error || t('common.messages.delete_failed'));
     }
   };
 
@@ -262,24 +272,30 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
                       {prompt.language}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(prompt)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 hover:bg-red-50 group"
-                      onClick={() => handleDelete(prompt)}
-                    >
-                      <Trash2 className="h-4 w-4 group-hover:text-red-600" />
-                    </Button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1">
+                      {canEdit && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(prompt)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-red-50 group"
+                          onClick={() => handleDelete(prompt)}
+                        >
+                          <Trash2 className="h-4 w-4 group-hover:text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Prompt 内容（带展开/收起） */}

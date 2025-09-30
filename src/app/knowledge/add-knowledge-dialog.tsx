@@ -20,6 +20,7 @@ import { KnowledgeTypeSelector } from './components/knowledge-type-selector';
 import { CategorySelector } from './components/category-selector';
 import { LanguageSelector } from './components/language-selector';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
+import { useToast } from '@/components/ui/toast';
 
 interface AddKnowledgeDialogProps {
   open: boolean;
@@ -48,6 +49,7 @@ export function AddKnowledgeDialog({
   currentLanguage 
 }: AddKnowledgeDialogProps) {
   const { t, isMounted } = useHydrationSafeTranslation();
+  const { addToast } = useToast();
   
   // 状态管理
   const [formData, setFormData] = useState<FormData>({
@@ -125,7 +127,7 @@ export function AddKnowledgeDialog({
   const handleSubmit = async () => {
     const validationError = validateForm();
     if (validationError) {
-      alert(validationError);
+      addToast('warning', validationError);
       return;
     }
 
@@ -147,13 +149,14 @@ export function AddKnowledgeDialog({
       });
 
       if (result.success) {
+        addToast('success', t('common.messages.create_success'));
         resetForm();
         onOpenChange(false);
       } else {
-        alert(result.error || t('common.validation.create_failed'));
+        addToast('error', result.error || t('common.validation.create_failed'));
       }
     } catch (error) {
-      alert(t('common.validation.create_failed'));
+      addToast('error', t('common.validation.create_failed'));
     } finally {
       setIsSubmitting(false);
     }
