@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.characters (
     age INTEGER,
     gender TEXT,
     nationality TEXT,
+    ancestral_home TEXT,
     job_title TEXT,
 
     -- Personal Information
@@ -51,6 +52,9 @@ CREATE TABLE IF NOT EXISTS public.characters (
     -- Relationship
     marital_status TEXT,
     relationship_exp TEXT,
+
+    -- Self Evaluation (全局兜底向量)
+    self_evaluation TEXT,
 
     -- Standard Fields
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,

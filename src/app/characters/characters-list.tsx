@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Plus, Save, Trash2, Camera, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -22,7 +23,7 @@ interface CharactersListProps {
   initialCharacters: Character[];
 }
 
-type TabKey = 'basic_info' | 'preference' | 'experience' | 'values' | 'photo';
+type TabKey = 'basic_info' | 'daily_life' | 'experience' | 'values' | 'dreams' | 'self_evaluation' | 'photo';
 
 export function CharactersList({ initialCharacters }: CharactersListProps) {
   const { t } = useHydrationSafeTranslation();
@@ -164,23 +165,98 @@ export function CharactersList({ initialCharacters }: CharactersListProps) {
     });
   };
 
-  const renderInputField = useCallback((field: keyof Character, label: string) => (
-    <div key={field} className="grid grid-cols-4 items-center gap-4">
+  // 单行输入框字段（现居地、工作地、家庭成员）
+  const singleLineFields = ['current_address', 'work_address', 'family_member'];
+
+  // 渲染单行输入框（基本信息 - 双列布局）
+  const renderBasicInfoField = useCallback((field: keyof Character, label: string) => (
+    <div key={field} className="grid grid-cols-4 items-center gap-3">
       <label className="text-sm font-medium text-right">{label}:</label>
       <Input
         value={editedCharacter?.[field] as string | number || ''}
         onChange={(e) => handleInputChange(field, e.target.value)}
-        className="col-span-3"
+        className="col-span-3 bg-muted/50"
         disabled={!canEdit}
       />
     </div>
   ), [editedCharacter, canEdit]);
 
-  const tabs: { key: TabKey; label: string; fields: (keyof Character)[] }[] = [
-    { key: 'basic_info', label: t('characters.tabs.basic_info'), fields: ['age', 'gender', 'nationality', 'job_title', 'height_cm', 'weight_kg', 'blood_type', 'zodiac', 'birth_date', 'birth_place'] },
-    { key: 'preference', label: t('characters.tabs.preference'), fields: ['current_address', 'work_address', 'daily_routine', 'favourite', 'family_member'] },
-    { key: 'experience', label: t('characters.tabs.experience'), fields: ['education_exp', 'work_exp', 'life_event', 'marital_status', 'relationship_exp'] },
-    { key: 'values', label: t('characters.tabs.values'), fields: ['worldview', 'life_philosophy', 'personal_values', 'future_plan', 'wish_place', 'life_dream'] },
+  // 渲染单行输入框（单列布局）
+  const renderSingleLineField = useCallback((field: keyof Character, label: string) => (
+    <div key={field} className="grid grid-cols-8 items-center gap-4">
+      <label className="text-sm font-medium text-right">{label}:</label>
+      <Input
+        value={editedCharacter?.[field] as string | number || ''}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        className="col-span-7 bg-muted/50"
+        disabled={!canEdit}
+      />
+    </div>
+  ), [editedCharacter, canEdit]);
+
+  // 渲染多行文本框（单列布局）
+  const renderTextareaField = useCallback((field: keyof Character, label: string) => (
+    <div key={field} className="grid grid-cols-8 items-start gap-4">
+      <label className="text-sm font-medium text-right pt-2">{label}:</label>
+      <Textarea
+        value={editedCharacter?.[field] as string || ''}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        className="col-span-7 min-h-[70px] resize-y bg-muted/50"
+        disabled={!canEdit}
+      />
+    </div>
+  ), [editedCharacter, canEdit]);
+
+  // 根据字段类型和所在标签页选择渲染方法
+  const renderField = useCallback((field: keyof Character, label: string, isBasicInfo: boolean = false) => {
+    // 基本信息标签页 - 全部使用单行输入框（双列布局）
+    if (isBasicInfo) {
+      return renderBasicInfoField(field, label);
+    }
+    // 其他标签页 - 根据字段类型选择（单列布局）
+    if (singleLineFields.includes(field as string)) {
+      return renderSingleLineField(field, label);
+    }
+    return renderTextareaField(field, label);
+  }, [renderBasicInfoField, renderSingleLineField, renderTextareaField]);
+
+  const tabs: { key: TabKey; label: string; fields: (keyof Character)[]; columns?: number }[] = [
+    { 
+      key: 'basic_info', 
+      label: t('characters.tabs.basic_info'), 
+      fields: ['gender', 'age', 'height_cm', 'weight_kg', 'marital_status', 'job_title', 'birth_date', 'birth_place', 'zodiac', 'blood_type', 'nationality', 'ancestral_home'],
+      columns: 2 // 两列布局
+    },
+    { 
+      key: 'daily_life', 
+      label: t('characters.tabs.daily_life'), 
+      fields: ['current_address', 'work_address', 'family_member', 'daily_routine', 'favourite'],
+      columns: 1 // 一列布局
+    },
+    { 
+      key: 'experience', 
+      label: t('characters.tabs.experience'), 
+      fields: ['relationship_exp', 'education_exp', 'work_exp', 'life_event'],
+      columns: 1 // 一列布局
+    },
+    { 
+      key: 'values', 
+      label: t('characters.tabs.values'), 
+      fields: ['worldview', 'life_philosophy', 'personal_values'],
+      columns: 1 // 一列布局
+    },
+    { 
+      key: 'dreams', 
+      label: t('characters.tabs.dreams'), 
+      fields: ['future_plan', 'wish_place', 'life_dream'],
+      columns: 1 // 一列布局
+    },
+    { 
+      key: 'self_evaluation', 
+      label: t('characters.tabs.self_evaluation'), 
+      fields: ['self_evaluation'],
+      columns: 1 // 一列布局
+    },
   ];
   
   return (
@@ -365,9 +441,12 @@ export function CharactersList({ initialCharacters }: CharactersListProps) {
               {/* Content Card */}
               <div className="flex-1 overflow-y-auto py-6 pl-4 pr-12 min-h-0">
                 {activeTab !== 'photo' && (
-                  <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                  <div className={cn(
+                    "gap-x-10 gap-y-6",
+                    tabs.find(t => t.key === activeTab)?.columns === 2 ? "grid grid-cols-2" : "flex flex-col"
+                  )}>
                     {tabs.find(t => t.key === activeTab)?.fields.map(field => 
-                      renderInputField(field, t(`characters.fields.${field}`))
+                      renderField(field, t(`characters.fields.${field}`), activeTab === 'basic_info')
                     )}
                   </div>
                 )}

@@ -12,6 +12,7 @@ export interface Character {
   age: number | null;
   gender: string | null;
   nationality: string | null;
+  ancestral_home: string | null;
   job_title: string | null;
   height_cm: number | null;
   weight_kg: number | null;
@@ -35,6 +36,7 @@ export interface Character {
   life_event: string | null;
   marital_status: string | null;
   relationship_exp: string | null;
+  self_evaluation: string | null;
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

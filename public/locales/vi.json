@@ -149,9 +149,11 @@
     "language_label": "Ngôn ngữ nhân vật",
     "tabs": {
       "basic_info": "Thông tin cơ bản",
-      "preference": "Sở thích",
+      "daily_life": "Cuộc sống hàng ngày",
       "experience": "Kinh nghiệm",
       "values": "Giá trị",
+      "dreams": "Ước mơ",
+      "self_evaluation": "Tự đánh giá",
       "photo": "Ảnh"
     },
     "fields": {
@@ -159,6 +161,7 @@
       "age": "Tuổi",
       "gender": "Giới tính",
       "nationality": "Quốc tịch",
+      "ancestral_home": "Quê quán",
       "job_title": "Chức vụ",
       "height_cm": "Chiều cao (cm)",
       "weight_kg": "Cân nặng (kg)",
@@ -181,7 +184,8 @@
       "work_exp": "Kinh nghiệm làm việc",
       "life_event": "Sự kiện cuộc đời",
       "marital_status": "Tình trạng hôn nhân",
-      "relationship_exp": "Kinh nghiệm tình cảm"
+      "relationship_exp": "Kinh nghiệm tình cảm",
+      "self_evaluation": "Tự đánh giá"
     }
   }
 }

@@ -149,9 +149,11 @@
     "language_label": "人设语言",
     "tabs": {
       "basic_info": "基本信息",
-      "preference": "喜好",
+      "daily_life": "生活相关",
       "experience": "经历",
       "values": "价值观",
+      "dreams": "梦想",
+      "self_evaluation": "自我评价",
       "photo": "照片"
     },
     "fields": {
@@ -159,6 +161,7 @@
       "age": "年龄",
       "gender": "性别",
       "nationality": "国籍",
+      "ancestral_home": "祖籍",
       "job_title": "职业",
       "height_cm": "身高 (cm)",
       "weight_kg": "体重 (kg)",
@@ -181,7 +184,8 @@
       "work_exp": "工作经历",
       "life_event": "人生大事",
       "marital_status": "婚姻状况",
-      "relationship_exp": "感情经历"
+      "relationship_exp": "感情经历",
+      "self_evaluation": "自我评价"
     }
   }
 }

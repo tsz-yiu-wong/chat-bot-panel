@@ -149,9 +149,11 @@
     "language_label": "Character Language",
     "tabs": {
       "basic_info": "Basic Info",
-      "preference": "Preference",
+      "daily_life": "Daily Life",
       "experience": "Experience",
       "values": "Values",
+      "dreams": "Dreams",
+      "self_evaluation": "Self Evaluation",
       "photo": "Photo"
     },
     "fields": {
@@ -159,6 +161,7 @@
       "age": "Age",
       "gender": "Gender",
       "nationality": "Nationality",
+      "ancestral_home": "Ancestral Home",
       "job_title": "Job Title",
       "height_cm": "Height (cm)",
       "weight_kg": "Weight (kg)",
@@ -181,7 +184,8 @@
       "work_exp": "Work Experience",
       "life_event": "Life Event",
       "marital_status": "Marital Status",
-      "relationship_exp": "Relationship Experience"
+      "relationship_exp": "Relationship Experience",
+      "self_evaluation": "Self Evaluation"
     }
   }
 }
