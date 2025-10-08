@@ -35,7 +35,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.topic_subcategories (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id uuid NOT NULL REFERENCES public.topic_categories(id) ON DELETE SET NULL,
+    category_id uuid REFERENCES public.topic_categories(id) ON DELETE SET NULL,
     name_zh TEXT NOT NULL,
     name_en TEXT NOT NULL,
     name_vi TEXT NOT NULL,
@@ -63,8 +63,8 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.topics (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id uuid NOT NULL REFERENCES public.topic_categories(id) ON DELETE SET NULL,
-    subcategory_id uuid NOT NULL REFERENCES public.topic_subcategories(id) ON DELETE SET NULL,
+    category_id uuid REFERENCES public.topic_categories(id) ON DELETE SET NULL,
+    subcategory_id uuid REFERENCES public.topic_subcategories(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     usage_count INTEGER NOT NULL DEFAULT 0,
     language language_type NOT NULL,

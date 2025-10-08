@@ -88,7 +88,7 @@ EXECUTE FUNCTION public.synchronize_vector_soft_delete('character_vectors', 'cha
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.character_images (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_id uuid NOT NULL REFERENCES public.characters(id) ON DELETE SET NULL,
+    character_id uuid REFERENCES public.characters(id) ON DELETE SET NULL,
     image_url TEXT NOT NULL,
     title TEXT,
     description TEXT,
@@ -114,7 +114,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.character_vectors (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_id uuid NOT NULL REFERENCES public.characters(id) ON DELETE SET NULL,
+    character_id uuid NOT NULL REFERENCES public.characters(id) ON DELETE CASCADE,
     facet TEXT,
     content TEXT NOT NULL,
     language language_type NOT NULL,

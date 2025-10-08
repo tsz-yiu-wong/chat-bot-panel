@@ -39,7 +39,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.chat_sessions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id uuid NOT NULL REFERENCES public.chat_users(id) ON DELETE SET NULL,
+    user_id uuid NOT NULL REFERENCES public.chat_users(id) ON DELETE RESTRICT,
     character_id uuid, -- Foreign key will be added once characters is created
     session_name TEXT,
     language language_type NOT NULL DEFAULT 'en',
@@ -73,7 +73,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.chat_messages (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id uuid NOT NULL REFERENCES public.chat_sessions(id) ON DELETE SET NULL,
+    session_id uuid NOT NULL REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
     user_id uuid REFERENCES public.chat_users(id) ON DELETE SET NULL, -- Can be null for system/topic messages
     role chat_message_role_type NOT NULL,
     content TEXT NOT NULL,
@@ -99,8 +99,8 @@ EXECUTE FUNCTION public.trigger_vectorization_request();
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.chat_message_vectors (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id uuid NOT NULL REFERENCES public.chat_sessions(id) ON DELETE SET NULL,
-    message_id uuid NOT NULL REFERENCES public.chat_messages(id) ON DELETE SET NULL,
+    session_id uuid NOT NULL REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
+    message_id uuid NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     embedding extensions.vector(1536),
     vector_type TEXT,
