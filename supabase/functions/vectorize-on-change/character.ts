@@ -22,7 +22,7 @@ const VECTORIZATION_LABELS = {
     // Life Information
     current_address: "你的现居地是：",
     work_address: "你工作地是：",
-    daily_routine: "你的日常生活：",
+    daily_routine: "你的日常生活时间线：",
     favourite: "你的喜好：",
     family_member: "你的家庭成员：",
     // Worldview
@@ -69,7 +69,7 @@ const VECTORIZATION_LABELS = {
     // Life Information
     current_address: "Your current address is: ",
     work_address: "Your work address is: ",
-    daily_routine: "Your daily routine: ",
+    daily_routine: "Your daily routine timeline: ",
     favourite: "Your favourites: ",
     family_member: "Your family members: ",
     // Worldview
@@ -116,7 +116,7 @@ const VECTORIZATION_LABELS = {
     // Life Information
     current_address: "Địa chỉ hiện tại của bạn là: ",
     work_address: "Nơi làm việc của bạn là: ",
-    daily_routine: "Thói quen hàng ngày của bạn: ",
+    daily_routine: "Thời gian thói quen hàng ngày của bạn: ",
     favourite: "Sở thích của bạn: ",
     family_member: "Thành viên gia đình bạn: ",
     // Worldview

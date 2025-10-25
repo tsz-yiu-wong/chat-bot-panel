@@ -1,6 +1,6 @@
-import { handleChatMessage } from './chat.ts';
 import { handleKnowledgeItem } from './knowledge.ts';
 import { handleCharacter } from './character.ts';
+import { handleEpisodicMemory } from './episodic.ts';
 
 // =================================================================
 // Interfaces and Types
@@ -31,14 +31,14 @@ Deno.serve(async (req) => {
 
     // Delegate to the appropriate handler based on the table name
     switch (table) {
-      case 'chat_messages':
-        await handleChatMessage(record);
-        break;
       case 'knowledge_items':
         await handleKnowledgeItem(record);
         break;
       case 'characters':
         await handleCharacter(record);
+        break;
+      case 'chat_users_episodic_memories':
+        await handleEpisodicMemory(record);
         break;
       default:
         // Log a warning for unhandled tables but don't throw an error

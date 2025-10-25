@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+*.crt
 
 # vercel
 .vercel
@@ -40,7 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
+__pycache__/
 _legacy
 .cursor
 .cursorignore
@@ -48,4 +49,6 @@ _legacy
 scripts
 _*.json
 
-
+# Python logs
+server/logs/
+*.log

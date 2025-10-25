@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS public.prompts (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL, -- Identifier for a group of language-specific prompts
     stage_id uuid REFERENCES public.prompt_stages(id) ON DELETE SET NULL,
-    model_name TEXT,
     language language_type NOT NULL, -- From 00_helpers.sql ('en', 'zh', 'vi')
     prompt TEXT,
     mark TEXT,

@@ -137,17 +137,6 @@ FOR EACH ROW
 EXECUTE FUNCTION public.update_updated_at_column();
 
 
-
--- =================================================================
--- Foreign Key Constraints
--- Add foreign key from chat_sessions to the new characters table.
--- =================================================================
-ALTER TABLE public.chat_sessions
-ADD CONSTRAINT fk_chat_sessions_character_id
-FOREIGN KEY (character_id)
-REFERENCES public.characters(id)
-ON DELETE SET NULL;
-
 -- HNSW Index for character_vectors
 -- Recommended for production after initial data load.
 /*

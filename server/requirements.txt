@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-supabase
+asyncpg
 openai
 pydantic
 python-dotenv
