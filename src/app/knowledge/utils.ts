@@ -71,15 +71,21 @@ export function sortKnowledgeItems(items: any[]): any[] {
 }
 
 /**
- * 根据知识库类型和分类过滤项目
+ * 根据语言、知识库类型和分类过滤项目
  */
 export function filterKnowledgeItems(
   items: any[],
+  selectedLanguage: string,
   selectedType: string,
   selectedCategory: string,
   searchQuery: string
 ) {
   const filtered = items.filter(item => {
+    // 语言筛选
+    if (selectedLanguage !== 'all' && item.language !== selectedLanguage) {
+      return false;
+    }
+
     // 类型筛选
     if (selectedType !== 'all' && item.knowledge_type !== selectedType) {
       return false;
@@ -90,7 +96,7 @@ export function filterKnowledgeItems(
       return false;
     }
 
-    // 搜索筛选
+    // 搜索筛选（在已筛选结果中搜索）
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const searchableText = [

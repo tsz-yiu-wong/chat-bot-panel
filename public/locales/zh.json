@@ -113,6 +113,11 @@
       "knowledge_type": "知识库类型",
       "category": "分类",
       "scene": "场景"
+    },
+    "filters": {
+      "all_languages": "全部语言",
+      "all_types": "缩写/话术",
+      "all_categories": "全部分类"
     }
   },
   "prompts": {
@@ -126,6 +131,10 @@
     },
     "labels": {
       "stage": "阶段"
+    },
+    "filters": {
+      "all_languages": "全部语言",
+      "all_stages": "全部阶段"
     }
   },
   "topics": {
@@ -141,6 +150,9 @@
       "subcategory": "子分类",
       "topic": "话题",
       "none_selected": "（不选择）"
+    },
+    "filters": {
+      "all_languages": "全部语言"
     }
   },
   "characters": {

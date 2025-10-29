@@ -113,6 +113,11 @@
       "knowledge_type": "Loại kiến thức",
       "category": "Danh mục",
       "scene": "Tình huống"
+    },
+    "filters": {
+      "all_languages": "Tất cả ngôn ngữ",
+      "all_types": "Viết tắt/Kịch bản",
+      "all_categories": "Tất cả danh mục"
     }
   },
   "prompts": {
@@ -126,6 +131,10 @@
     },
     "labels": {
       "stage": "Giai đoạn"
+    },
+    "filters": {
+      "all_languages": "Tất cả ngôn ngữ",
+      "all_stages": "Tất cả giai đoạn"
     }
   },
   "topics": {
@@ -141,6 +150,9 @@
       "subcategory": "Danh mục con",
       "topic": "Chủ đề",
       "none_selected": "(Không chọn)"
+    },
+    "filters": {
+      "all_languages": "Tất cả ngôn ngữ"
     }
   },
   "characters": {

@@ -1,13 +1,19 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Settings, Filter, ChevronDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import { TopicCategory, TopicSubcategory, Topic } from './page';
 import { 
@@ -28,12 +34,14 @@ interface TopicsListProps {
   initialCategories: TopicCategory[];
   initialSubcategories: TopicSubcategory[];
   initialTopics: Topic[];
+  initialLanguages: string[];
 }
 
 export function TopicsList({ 
   initialCategories, 
   initialSubcategories, 
-  initialTopics 
+  initialTopics,
+  initialLanguages
 }: TopicsListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t, isMounted, currentLanguage } = useHydrationSafeTranslation();
@@ -45,10 +53,12 @@ export function TopicsList({
   const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
+  const [languageDropdownOpen, setLanguageDropdownOpen] = useState<boolean>(false);
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState<boolean>(false);
   const [addTopicOpen, setAddTopicOpen] = useState<boolean>(false);
   const [editTopicOpen, setEditTopicOpen] = useState<boolean>(false);
@@ -61,16 +71,22 @@ export function TopicsList({
     return initialSubcategories.filter(sub => sub.category_id === selectedCategoryId);
   }, [initialSubcategories, selectedCategoryId]);
 
-  // 全局搜索结果（不受分类筛选影响）
+  // 全局搜索结果（受语言筛选影响，不受分类筛选影响）
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return filterTopics(initialTopics, null, null, searchQuery).slice(0, 10); // 最多显示10个结果
-  }, [initialTopics, searchQuery]);
+    return filterTopics(initialTopics, selectedLanguage, null, null, searchQuery).slice(0, 10); // 最多显示10个结果
+  }, [initialTopics, selectedLanguage, searchQuery]);
 
-  // 根据分类筛选的 Topics（不含搜索）
+  // 根据语言和分类筛选的 Topics（不含搜索）
   const filteredTopics = useMemo(() => {
-    return filterTopics(initialTopics, selectedCategoryId, selectedSubcategoryId, '');
-  }, [initialTopics, selectedCategoryId, selectedSubcategoryId]);
+    return filterTopics(initialTopics, selectedLanguage, selectedCategoryId, selectedSubcategoryId, '');
+  }, [initialTopics, selectedLanguage, selectedCategoryId, selectedSubcategoryId]);
+
+  // 获取选中语言的显示名称
+  const getSelectedLanguageName = () => {
+    if (selectedLanguage === 'all') return t('topics.filters.all_languages');
+    return selectedLanguage;
+  };
 
   // 处理 Category 选中
   const handleCategorySelect = (categoryId: string) => {
@@ -188,47 +204,75 @@ export function TopicsList({
         </div>
       </div>
 
-      {/* 搜索区域 */}
-      <div className="flex gap-4 items-center mb-4 relative">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-          <Input
-            placeholder={t('common.messages.search_placeholder', { module: t('topics.module_name') })}
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-            onFocus={() => searchQuery.trim() && setShowSearchResults(true)}
-            className="pl-10"
-          />
-          
-          {/* 搜索结果下拉框 */}
-          {showSearchResults && searchResults.length > 0 && (
-            <Card className="absolute top-full mt-1 w-full z-50 max-h-96 overflow-y-auto py-0 gap-0">
-              <div className="py-2">
-                {searchResults.map(topic => (
-                  <div
-                    key={topic.id}
-                    onClick={() => handleSearchResultClick(topic)}
-                    className="px-4 py-3 hover:bg-muted cursor-pointer border-b last:border-b-0 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="px-2 py-0.5 text-xs rounded bg-muted text-muted-foreground shrink-0 mt-0.5">
-                        {topic.language}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm line-clamp-2 mb-1">{topic.content}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {topic.category && getHydrationSafeCategoryDisplayName(topic.category, currentLanguage, isMounted)}
-                          {topic.category && topic.subcategory && ' / '}
-                          {topic.subcategory && getHydrationSafeSubcategoryDisplayName(topic.subcategory, currentLanguage, isMounted)}
+      {/* 筛选和搜索区域 */}
+      <div className="flex gap-4 items-center mb-4">
+        <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+
+        {/* 语言筛选 */}
+        <DropdownMenu onOpenChange={setLanguageDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="max-w-[200px] justify-between gap-2">
+              <span className="truncate">{getSelectedLanguageName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${languageDropdownOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedLanguage('all')}>
+              {t('topics.filters.all_languages')}
+            </DropdownMenuItem>
+            {initialLanguages.map(lang => (
+              <DropdownMenuItem 
+                key={lang}
+                onClick={() => setSelectedLanguage(lang)}
+              >
+                {lang}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* 搜索框 */}
+        <div className="flex gap-2 items-center flex-1 relative">
+          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="relative flex-1">
+            <Input
+              placeholder={t('common.messages.search_placeholder', { module: t('topics.module_name') })}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+              onFocus={() => searchQuery.trim() && setShowSearchResults(true)}
+              className="w-full"
+            />
+            
+            {/* 搜索结果下拉框 */}
+            {showSearchResults && searchResults.length > 0 && (
+              <Card className="absolute top-full mt-1 w-full z-50 max-h-96 overflow-y-auto py-0 gap-0">
+                <div className="py-2">
+                  {searchResults.map(topic => (
+                    <div
+                      key={topic.id}
+                      onClick={() => handleSearchResultClick(topic)}
+                      className="px-4 py-3 hover:bg-muted cursor-pointer border-b last:border-b-0 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="px-2 py-0.5 text-xs rounded bg-muted text-muted-foreground shrink-0 mt-0.5">
+                          {topic.language}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm line-clamp-2 mb-1">{topic.content}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {topic.category && getHydrationSafeCategoryDisplayName(topic.category, currentLanguage, isMounted)}
+                            {topic.category && topic.subcategory && ' / '}
+                            {topic.subcategory && getHydrationSafeSubcategoryDisplayName(topic.subcategory, currentLanguage, isMounted)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
 

@@ -28,9 +28,10 @@ import { hasOperationPermission } from '@/lib/permissions';
 interface KnowledgeListProps {
   initialCategories: KnowledgeCategory[];
   initialItems: KnowledgeItem[];
+  initialLanguages: string[];
 }
 
-export function KnowledgeList({ initialCategories, initialItems }: KnowledgeListProps) {
+export function KnowledgeList({ initialCategories, initialItems, initialLanguages }: KnowledgeListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t, isMounted, currentLanguage } = useHydrationSafeTranslation();
   
@@ -41,9 +42,11 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
   const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [languageDropdownOpen, setLanguageDropdownOpen] = useState<boolean>(false);
   const [typeDropdownOpen, setTypeDropdownOpen] = useState<boolean>(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState<boolean>(false);
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState<boolean>(false);
@@ -66,8 +69,8 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
 
   // 筛选后的知识库项目
   const filteredItems = useMemo(() => {
-    return filterKnowledgeItems(initialItems, selectedType, selectedCategory, searchQuery);
-  }, [initialItems, selectedType, selectedCategory, searchQuery]);
+    return filterKnowledgeItems(initialItems, selectedLanguage, selectedType, selectedCategory, searchQuery);
+  }, [initialItems, selectedLanguage, selectedType, selectedCategory, searchQuery]);
 
   // 当类型改变时重置分类选择
   const handleTypeChange = (newType: string) => {
@@ -75,11 +78,23 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
     setSelectedCategory('all');
   };
 
+  // 获取选中语言的显示名称
+  const getSelectedLanguageName = () => {
+    if (selectedLanguage === 'all') return t('knowledge.filters.all_languages');
+    return selectedLanguage;
+  };
+
+  // 获取选中类型的显示名称
+  const getSelectedTypeName = () => {
+    if (selectedType === 'all') return t('knowledge.filters.all_types');
+    return t(`knowledge.types.${selectedType}`);
+  };
+
   // 获取当前选中分类的显示名称
   const getSelectedCategoryName = () => {
-    if (selectedCategory === 'all') return t('common.all');
+    if (selectedCategory === 'all') return t('knowledge.filters.all_categories');
     const category = availableCategories.find(cat => cat.id === selectedCategory);
-    return category?.displayName || t('common.all');
+    return category?.displayName || t('knowledge.filters.all_categories');
   };
 
   // 处理编辑
@@ -146,33 +161,42 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
 
       {/* 搜索和筛选区域 */}
       <div className="flex gap-4 items-center mb-4">
-        {/* 搜索框 */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('common.messages.search_placeholder', { module: t('knowledge.module_name') })}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        {/* 语言筛选 */}
+        <DropdownMenu onOpenChange={setLanguageDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="max-w-[200px] justify-between gap-2">
+              <span className="truncate">{getSelectedLanguageName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${languageDropdownOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedLanguage('all')}>
+              {t('knowledge.filters.all_languages')}
+            </DropdownMenuItem>
+            {initialLanguages.map(lang => (
+              <DropdownMenuItem 
+                key={lang}
+                onClick={() => setSelectedLanguage(lang)}
+              >
+                {lang}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         {/* 知识库类型筛选 */}
         <DropdownMenu onOpenChange={setTypeDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[180px] justify-between">
-              {selectedType === 'all' 
-                ? t('common.all') 
-                : t(`knowledge.types.${selectedType}`)
-              }
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${typeDropdownOpen ? 'rotate-180' : ''}`} />
+            <Button variant="outline" className="max-w-[200px] justify-between gap-2">
+              <span className="truncate">{getSelectedTypeName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${typeDropdownOpen ? 'rotate-180' : ''}`} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => handleTypeChange('all')}>
-              {t('common.all')}
+              {t('knowledge.filters.all_types')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleTypeChange('abbreviation')}>
               {t('knowledge.types.abbreviation')}
@@ -188,16 +212,16 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              className="min-w-[180px] justify-between"
+              className="max-w-[200px] justify-between gap-2"
               disabled={selectedType === 'all'}
             >
-              {getSelectedCategoryName()}
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+              <span className="truncate">{getSelectedCategoryName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => setSelectedCategory('all')}>
-              {t('common.all')}
+              {t('knowledge.filters.all_categories')}
             </DropdownMenuItem>
             {availableCategories.map(category => (
               <DropdownMenuItem 
@@ -209,6 +233,17 @@ export function KnowledgeList({ initialCategories, initialItems }: KnowledgeList
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* 搜索框 */}
+        <div className="flex gap-2 items-center flex-1">
+          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <Input
+            placeholder={t('common.messages.search_placeholder', { module: t('knowledge.module_name') })}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+        </div>
       </div>
 
       {/* 结果统计 */}

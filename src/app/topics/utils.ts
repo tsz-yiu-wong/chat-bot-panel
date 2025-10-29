@@ -81,15 +81,21 @@ export function getHydrationSafeSubcategoryDisplayName(
 }
 
 /**
- * 根据选中的分类和子分类以及搜索查询过滤话题
+ * 根据语言、分类、子分类和搜索查询过滤话题
  */
 export function filterTopics(
   topics: any[],
+  selectedLanguage: string | null,
   selectedCategoryId: string | null,
   selectedSubcategoryId: string | null,
   searchQuery: string
 ) {
   return topics.filter(topic => {
+    // 语言筛选
+    if (selectedLanguage && selectedLanguage !== 'all' && topic.language !== selectedLanguage) {
+      return false;
+    }
+
     // 分类筛选
     if (selectedCategoryId && topic.category_id !== selectedCategoryId) {
       return false;

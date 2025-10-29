@@ -47,6 +47,30 @@ async function getPromptStages(): Promise<PromptStage[]> {
   }
 }
 
+// 获取所有语言选项（从数据库动态获取）
+async function getLanguages(): Promise<string[]> {
+  try {
+    const supabase = await createServerActionClient();
+    
+    const { data, error } = await supabase
+      .from('prompts')
+      .select('language')
+      .eq('is_deleted', false);
+
+    if (error) {
+      console.error('获取语言列表失败:', error);
+      return [];
+    }
+
+    // 去重并排序
+    const uniqueLanguages = Array.from(new Set(data?.map(item => item.language).filter(Boolean) || []));
+    return uniqueLanguages.sort();
+  } catch (error) {
+    console.error('数据库连接异常 (Languages):', error);
+    return [];
+  }
+}
+
 // 获取 Prompts 数据
 async function getPrompts(): Promise<Prompt[]> {
   try {
@@ -75,7 +99,8 @@ export default async function PromptsPage() {
     // 并行获取数据以提高性能
     const dataPromise = Promise.all([
       getPromptStages(),
-      getPrompts()
+      getPrompts(),
+      getLanguages()
     ]);
 
     // 设置 10 秒超时，防止页面长时间卡顿
@@ -83,7 +108,7 @@ export default async function PromptsPage() {
       setTimeout(() => reject(new Error('数据加载超时')), 10000);
     });
 
-    const [allStages, promptsWithoutStage] = await Promise.race([dataPromise, timeoutPromise]);
+    const [allStages, promptsWithoutStage, allLanguages] = await Promise.race([dataPromise, timeoutPromise]);
 
     // 在服务端进行数据关联
     const stagesMap = new Map(allStages.map(stage => [stage.id, stage]));
@@ -97,6 +122,7 @@ export default async function PromptsPage() {
         <PromptsList 
           initialStages={allStages}
           initialPrompts={promptsWithStage}
+          initialLanguages={allLanguages}
         />
       </div>
     );
@@ -109,6 +135,7 @@ export default async function PromptsPage() {
         <PromptsList 
           initialStages={[]}
           initialPrompts={[]}
+          initialLanguages={[]}
         />
       </div>
     );

@@ -61,6 +61,30 @@ async function getTopicCategories(): Promise<TopicCategory[]> {
   }
 }
 
+// 获取所有语言选项（从数据库动态获取）
+async function getLanguages(): Promise<string[]> {
+  try {
+    const supabase = await createServerActionClient();
+    
+    const { data, error } = await supabase
+      .from('topics')
+      .select('language')
+      .eq('is_deleted', false);
+
+    if (error) {
+      console.error('获取语言列表失败:', error);
+      return [];
+    }
+
+    // 去重并排序
+    const uniqueLanguages = Array.from(new Set(data?.map(item => item.language).filter(Boolean) || []));
+    return uniqueLanguages.sort();
+  } catch (error) {
+    console.error('数据库连接异常 (Languages):', error);
+    return [];
+  }
+}
+
 // 获取话题子分类数据
 async function getTopicSubcategories(): Promise<TopicSubcategory[]> {
   try {
@@ -113,7 +137,8 @@ export default async function TopicsPage() {
     const dataPromise = Promise.all([
       getTopicCategories(),
       getTopicSubcategories(),
-      getTopics()
+      getTopics(),
+      getLanguages()
     ]);
 
     // 设置 10 秒超时，防止页面长时间卡顿
@@ -121,7 +146,7 @@ export default async function TopicsPage() {
       setTimeout(() => reject(new Error('数据加载超时')), 10000);
     });
 
-    const [allCategories, allSubcategories, topicsWithoutRelations] = await Promise.race([dataPromise, timeoutPromise]);
+    const [allCategories, allSubcategories, topicsWithoutRelations, allLanguages] = await Promise.race([dataPromise, timeoutPromise]);
 
     // 在服务端进行数据关联
     const categoriesMap = new Map(allCategories.map(cat => [cat.id, cat]));
@@ -138,6 +163,7 @@ export default async function TopicsPage() {
         initialCategories={allCategories}
         initialSubcategories={allSubcategories}
         initialTopics={topicsWithRelations}
+        initialLanguages={allLanguages}
       />
     );
   } catch (error) {
@@ -149,6 +175,7 @@ export default async function TopicsPage() {
         initialCategories={[]}
         initialSubcategories={[]}
         initialTopics={[]}
+        initialLanguages={[]}
       />
     );
   }

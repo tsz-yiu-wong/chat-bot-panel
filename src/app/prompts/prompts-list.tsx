@@ -28,9 +28,10 @@ import { hasOperationPermission } from '@/lib/permissions';
 interface PromptsListProps {
   initialStages: PromptStage[];
   initialPrompts: Prompt[];
+  initialLanguages: string[];
 }
 
-export function PromptsList({ initialStages, initialPrompts }: PromptsListProps) {
+export function PromptsList({ initialStages, initialPrompts, initialLanguages }: PromptsListProps) {
   // 使用hydration-safe翻译，避免hydration不匹配
   const { t } = useHydrationSafeTranslation();
   
@@ -41,8 +42,10 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
   const canDelete = userRole ? hasOperationPermission(userRole, 'delete') : false;
 
   // 状态管理
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [selectedStage, setSelectedStage] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [languageDropdownOpen, setLanguageDropdownOpen] = useState<boolean>(false);
   const [stageDropdownOpen, setStageDropdownOpen] = useState<boolean>(false);
   const [manageStagesOpen, setManageStagesOpen] = useState<boolean>(false);
   const [addPromptOpen, setAddPromptOpen] = useState<boolean>(false);
@@ -53,14 +56,20 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
 
   // 筛选后的 Prompt 项目
   const filteredPrompts = useMemo(() => {
-    return filterPrompts(initialPrompts, selectedStage, searchQuery);
-  }, [initialPrompts, selectedStage, searchQuery]);
+    return filterPrompts(initialPrompts, selectedLanguage, selectedStage, searchQuery);
+  }, [initialPrompts, selectedLanguage, selectedStage, searchQuery]);
+
+  // 获取选中语言的显示名称
+  const getSelectedLanguageName = () => {
+    if (selectedLanguage === 'all') return t('prompts.filters.all_languages');
+    return selectedLanguage;
+  };
 
   // 获取选中 Stage 的显示名称
   const getSelectedStageName = () => {
-    if (selectedStage === 'all') return t('common.all');
+    if (selectedStage === 'all') return t('prompts.filters.all_stages');
     const stage = initialStages.find(s => s.id === selectedStage);
-    return stage?.name || t('common.all');
+    return stage?.name || t('prompts.filters.all_stages');
   };
 
   // 处理编辑
@@ -208,30 +217,42 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
 
       {/* 搜索和筛选区域 */}
       <div className="flex gap-4 items-center mb-4">
-        {/* 搜索框 */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('common.messages.search_placeholder', { module: t('prompts.module_name') })}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        {/* 语言筛选 */}
+        <DropdownMenu onOpenChange={setLanguageDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="max-w-[200px] justify-between gap-2">
+              <span className="truncate">{getSelectedLanguageName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${languageDropdownOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedLanguage('all')}>
+              {t('prompts.filters.all_languages')}
+            </DropdownMenuItem>
+            {initialLanguages.map(lang => (
+              <DropdownMenuItem 
+                key={lang}
+                onClick={() => setSelectedLanguage(lang)}
+              >
+                {lang}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         {/* Stage 筛选 */}
         <DropdownMenu onOpenChange={setStageDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[180px] justify-between">
-              {getSelectedStageName()}
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${stageDropdownOpen ? 'rotate-180' : ''}`} />
+            <Button variant="outline" className="max-w-[200px] justify-between gap-2">
+              <span className="truncate">{getSelectedStageName()}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${stageDropdownOpen ? 'rotate-180' : ''}`} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => setSelectedStage('all')}>
-              {t('common.all')}
+              {t('prompts.filters.all_stages')}
             </DropdownMenuItem>
             {initialStages.map(stage => (
               <DropdownMenuItem 
@@ -243,6 +264,17 @@ export function PromptsList({ initialStages, initialPrompts }: PromptsListProps)
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* 搜索框 */}
+        <div className="flex gap-2 items-center flex-1">
+          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <Input
+            placeholder={t('common.messages.search_placeholder', { module: t('prompts.module_name') })}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+        </div>
       </div>
 
       {/* 结果统计 */}

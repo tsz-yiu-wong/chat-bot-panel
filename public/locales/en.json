@@ -113,6 +113,11 @@
       "knowledge_type": "Knowledge Type",
       "category": "Category",
       "scene": "Scene"
+    },
+    "filters": {
+      "all_languages": "All Languages",
+      "all_types": "Abbreviation/Script",
+      "all_categories": "All Categories"
     }
   },
   "prompts": {
@@ -126,6 +131,10 @@
     },
     "labels": {
       "stage": "Stage"
+    },
+    "filters": {
+      "all_languages": "All Languages",
+      "all_stages": "All Stages"
     }
   },
   "topics": {
@@ -141,6 +150,9 @@
       "subcategory": "Subcategory",
       "topic": "Topic",
       "none_selected": "(None)"
+    },
+    "filters": {
+      "all_languages": "All Languages"
     }
   },
   "characters": {
