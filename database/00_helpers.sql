@@ -9,7 +9,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'language_type') THEN
-        CREATE TYPE public.language_type AS ENUM ('en', 'zh', 'vi');
+        CREATE TYPE public.language_type AS ENUM ('en', 'zh-cn', 'zh-tw', 'ja', 'ko', 'vi');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'knowledge_type') THEN
         CREATE TYPE public.knowledge_type AS ENUM ('abbreviation', 'script');

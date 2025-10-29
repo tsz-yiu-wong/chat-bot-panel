@@ -7,7 +7,7 @@ import { createServerActionClient } from '@/lib/supabase-server';
 interface CreateKnowledgeItemData {
   knowledge_type: 'abbreviation' | 'script';
   category_id?: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   // abbreviation 类型字段
   abbreviation?: string;
   full_form?: string;

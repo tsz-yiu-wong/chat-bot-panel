@@ -29,7 +29,7 @@ export interface Topic {
   subcategory_id: string;
   content: string;
   usage_count: number;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

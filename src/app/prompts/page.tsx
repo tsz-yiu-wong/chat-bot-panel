@@ -14,7 +14,7 @@ export interface Prompt {
   id: string;
   name: string;
   stage_id: string | null;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   prompt: string | null;
   mark: string | null;
   is_deleted: boolean;

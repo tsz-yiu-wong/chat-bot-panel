@@ -17,7 +17,7 @@ export interface KnowledgeItem {
   id: string;
   knowledge_type: 'abbreviation' | 'script';
   category_id: string | null;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   // abbreviation 类型字段
   abbreviation?: string | null;
   full_form?: string | null;

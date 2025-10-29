@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { createServerActionClient } from '@/lib/supabase-server';
-import { Character, language_type } from './page';
+import { Character } from './page';
 
 /**
  * Create a new character with minimal information.
  */
 export async function createCharacter(data: {
   name: string;
-  language: language_type;
+  language: string;
 }) {
   try {
     const supabase = await createServerActionClient();

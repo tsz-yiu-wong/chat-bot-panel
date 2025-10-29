@@ -7,7 +7,7 @@ import { createServerActionClient } from '@/lib/supabase-server';
 interface CreatePromptData {
   name: string;
   stage_id?: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   prompt?: string;
   mark?: string;
 }

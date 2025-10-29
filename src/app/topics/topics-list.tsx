@@ -34,7 +34,7 @@ interface TopicsListProps {
   initialCategories: TopicCategory[];
   initialSubcategories: TopicSubcategory[];
   initialTopics: Topic[];
-  initialLanguages: string[];
+  initialLanguages: string[]; // 用于筛选器（动态从数据库获取）
 }
 
 export function TopicsList({ 

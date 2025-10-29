@@ -22,7 +22,7 @@ interface AddPromptDialogProps {
 interface FormData {
   name: string;
   stage_id: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   prompt: string;
   note: string;
 }

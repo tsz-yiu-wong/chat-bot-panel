@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.chat_users (
     avatar_url TEXT,
     metadata JSONB,
     -- Session-related fields (moved from chat_sessions)
-    language language_type NOT NULL DEFAULT 'en',
+    language language_type NOT NULL, -- 要求明确指定语言，不设置默认值
     character_id uuid REFERENCES public.characters(id) ON DELETE SET NULL,
     current_stage_id uuid REFERENCES public.prompt_stages(id) ON DELETE SET NULL,
     topic_trigger_hours INTEGER DEFAULT 24,

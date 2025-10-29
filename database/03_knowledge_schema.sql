@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.knowledge_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     knowledge_type knowledge_type NOT NULL, -- 'abbreviation' or 'script' from 00_helpers.sql
     category_id uuid REFERENCES public.knowledge_categories(id) ON DELETE SET NULL,
-    language language_type NOT NULL DEFAULT 'en',
+    language language_type NOT NULL, -- 要求明确指定语言，不设置默认值
 
     -- Fields for 'abbreviation' type
     abbreviation TEXT,

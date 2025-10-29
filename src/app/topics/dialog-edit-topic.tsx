@@ -20,13 +20,13 @@ interface EditTopicDialogProps {
   topic: Topic | null;
   categories: TopicCategory[];
   subcategories: TopicSubcategory[];
-  currentLanguage: string;
+  currentLanguage: string; // UI 语言
 }
 
 interface FormData {
   category_id: string;
   subcategory_id: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   content: string;
 }
 
@@ -36,7 +36,7 @@ export function EditTopicDialog({
   topic,
   categories,
   subcategories,
-  currentLanguage 
+  currentLanguage
 }: EditTopicDialogProps) {
   const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
@@ -138,7 +138,7 @@ export function EditTopicDialog({
           />
           <LanguageSelector
             value={formData.language}
-            onChange={(value: 'en' | 'zh' | 'vi') => setFormData(prev => ({ ...prev, language: value }))}
+            onChange={(value: string) => setFormData(prev => ({ ...prev, language: value }))}
           />
         </>
       }

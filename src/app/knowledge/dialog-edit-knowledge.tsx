@@ -19,11 +19,11 @@ interface EditKnowledgeDialogProps {
   onOpenChange: (open: boolean) => void;
   item: KnowledgeItem | null;
   categories: KnowledgeCategory[];
-  currentLanguage: string;
+  currentLanguage: string; // UI 语言
 }
 
 interface FormData {
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   abbreviation?: string;
   full_form?: string;
   description?: string;
@@ -36,7 +36,7 @@ export function EditKnowledgeDialog({
   onOpenChange, 
   item,
   categories, 
-  currentLanguage 
+  currentLanguage
 }: EditKnowledgeDialogProps) {
   const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();

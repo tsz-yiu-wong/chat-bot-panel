@@ -5,7 +5,7 @@
 ## 1. 命名与数据约定
 
 - **语言与多语言字段**:
-  - 系统支持三种语言, 定义为 `language_type` ENUM: `'en'` (英文), `'zh'` (中文), `'vi'` (越南语)。
+  - 系统支持六种语言, 定义为 `language_type` ENUM: `'en'` (英文), `'zh-cn'` (简体中文), `'zh-tw'` (繁体中文), `'ja'` (日文), `'ko'` (韩文), `'vi'` (越南文)。
   - **核心内容表** (`topics`, `knowledge_items`, `prompts` 等) 统一采用“长表”模式：使用 `language language_type` 字段来区分不同语言的记录。
   - **分类或辅助表** (`topic_categories`, `characters` 等) 在需要多语言支持时，采用“宽表”模式：字段统一采用 `name_en`, `name_zh`, `name_vi` 的形式。
 - **软删除**:

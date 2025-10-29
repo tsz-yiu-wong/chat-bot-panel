@@ -17,15 +17,15 @@ import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translat
 import { useUser } from '@/components/user-context';
 import { hasOperationPermission } from '@/lib/permissions';
 import { LanguageSelector } from '@/components/shared/language-selector';
-import { language_type } from './page';
 
 interface CharactersListProps {
   initialCharacters: Character[];
+  initialLanguages: string[]; // 用于筛选器（动态从数据库获取）
 }
 
 type TabKey = 'basic_info' | 'daily_life' | 'experience' | 'values' | 'dreams' | 'self_evaluation' | 'photo';
 
-export function CharactersList({ initialCharacters }: CharactersListProps) {
+export function CharactersList({ initialCharacters, initialLanguages }: CharactersListProps) {
   const { t } = useHydrationSafeTranslation();
   const { userRole } = useUser();
   const { addToast } = useToast();
@@ -400,7 +400,7 @@ export function CharactersList({ initialCharacters }: CharactersListProps) {
                 <div className="[&_button]:h-8 [&_button]:py-0 ml-2">
                   <LanguageSelector
                     value={editedCharacter.language || 'en'}
-                    onChange={(value: language_type) => handleInputChange('language', value)}
+                    onChange={(value: string) => handleInputChange('language', value)}
                     disabled={!canEdit}
                     showLabel={false}
                   />
@@ -487,7 +487,10 @@ export function CharactersList({ initialCharacters }: CharactersListProps) {
         </Card>
       </div>
       
-      <AddCharacterDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <AddCharacterDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen}
+      />
       <ConfirmDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

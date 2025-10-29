@@ -22,7 +22,7 @@ interface EditPromptDialogProps {
 
 interface FormData {
   name: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   prompt: string;
   note: string;
 }

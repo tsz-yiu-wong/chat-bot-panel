@@ -244,7 +244,7 @@ export async function createTopic(data: {
   category_id: string;
   subcategory_id: string;
   content: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
 }) {
   try {
     const supabase = await createServerActionClient();
@@ -281,7 +281,7 @@ export async function updateTopic(data: {
   category_id: string;
   subcategory_id: string;
   content: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
 }) {
   try {
     const supabase = await createServerActionClient();

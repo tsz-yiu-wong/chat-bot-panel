@@ -28,7 +28,7 @@ import { hasOperationPermission } from '@/lib/permissions';
 interface PromptsListProps {
   initialStages: PromptStage[];
   initialPrompts: Prompt[];
-  initialLanguages: string[];
+  initialLanguages: string[]; // 用于筛选器（动态从数据库获取）
 }
 
 export function PromptsList({ initialStages, initialPrompts, initialLanguages }: PromptsListProps) {

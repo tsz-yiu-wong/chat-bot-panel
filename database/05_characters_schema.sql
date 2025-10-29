@@ -9,7 +9,7 @@
 -- =================================================================
 CREATE TABLE IF NOT EXISTS public.characters (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    language language_type NOT NULL DEFAULT 'en',
+    language language_type NOT NULL, -- 要求明确指定语言，不设置默认值
 
     -- Core Information
     name TEXT,

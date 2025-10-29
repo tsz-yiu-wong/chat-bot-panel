@@ -19,13 +19,13 @@ interface AddTopicDialogProps {
   onOpenChange: (open: boolean) => void;
   categories: TopicCategory[];
   subcategories: TopicSubcategory[];
-  currentLanguage: string;
+  currentLanguage: string; // UI 语言
 }
 
 interface FormData {
   category_id: string;
   subcategory_id: string;
-  language: 'en' | 'zh' | 'vi';
+  language: string;
   content: string;
 }
 
@@ -34,7 +34,7 @@ export function AddTopicDialog({
   onOpenChange, 
   categories,
   subcategories,
-  currentLanguage 
+  currentLanguage
 }: AddTopicDialogProps) {
   const { t } = useHydrationSafeTranslation();
   const { addToast } = useToast();
@@ -132,7 +132,7 @@ export function AddTopicDialog({
           />
           <LanguageSelector
             value={formData.language}
-            onChange={(value: 'en' | 'zh' | 'vi') => setFormData(prev => ({ ...prev, language: value }))}
+            onChange={(value: string) => setFormData(prev => ({ ...prev, language: value }))}
           />
         </>
       }

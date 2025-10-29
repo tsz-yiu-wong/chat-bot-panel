@@ -1,13 +1,10 @@
 import { createServerActionClient } from '@/lib/supabase-server';
 import { CharactersList } from './characters-list';
 
-// Define the language type directly
-export type language_type = 'en' | 'zh' | 'vi';
-
 // Corresponds to the 'characters' table in 05_characters_schema.sql
 export interface Character {
   id: string;
-  language: language_type;
+  language: string;
   name: string | null;
   age: number | null;
   gender: string | null;
@@ -65,20 +62,60 @@ async function getCharacters(): Promise<Character[]> {
   }
 }
 
+// 获取所有语言选项（从数据库动态获取）
+async function getLanguages(): Promise<string[]> {
+  try {
+    const supabase = await createServerActionClient();
+    
+    const { data, error } = await supabase
+      .from('characters')
+      .select('language')
+      .eq('is_deleted', false);
+
+    if (error) {
+      console.error('Failed to fetch languages:', error);
+      return [];
+    }
+
+    // 去重并排序
+    const uniqueLanguages = Array.from(new Set(data?.map(item => item.language).filter(Boolean) || []));
+    return uniqueLanguages.sort();
+  } catch (error) {
+    console.error('Database connection error (Languages):', error);
+    return [];
+  }
+}
+
 export default async function CharactersPage() {
   try {
+    // 并行获取数据以提高性能
+    const dataPromise = Promise.all([
+      getCharacters(),
+      getLanguages()
+    ]);
+
     // Set a 10-second timeout to prevent the page from hanging
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Data loading timeout')), 10000);
     });
 
-    const characters = await Promise.race([getCharacters(), timeoutPromise]);
+    const [characters, allLanguages] = await Promise.race([dataPromise, timeoutPromise]);
 
-    return <CharactersList initialCharacters={characters} />;
+    return (
+      <CharactersList 
+        initialCharacters={characters} 
+        initialLanguages={allLanguages}
+      />
+    );
   } catch (error) {
     console.error('Characters page failed to load:', error);
     
     // In case of a timeout or error, return the page with empty data to avoid crashing
-    return <CharactersList initialCharacters={[]} />;
+    return (
+      <CharactersList 
+        initialCharacters={[]} 
+        initialLanguages={[]}
+      />
+    );
   }
 }

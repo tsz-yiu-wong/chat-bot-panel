@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useHydrationSafeTranslation } from '@/hooks/use-hydration-safe-translation';
 import { useToast } from '@/components/ui/toast';
-import { language_type } from './page';
 
 interface AddCharacterDialogProps {
   open: boolean;
@@ -18,7 +17,7 @@ interface AddCharacterDialogProps {
 }
 
 interface FormData {
-  language: language_type;
+  language: string;
   name: string;
 }
 
@@ -86,7 +85,7 @@ export function AddCharacterDialog({ open, onOpenChange }: AddCharacterDialogPro
           <Label className="whitespace-nowrap">{t('characters.language_label')}:</Label>
           <LanguageSelector
             value={formData.language}
-            onChange={(value: language_type) => setFormData(prev => ({ ...prev, language: value }))}
+            onChange={(value: string) => setFormData(prev => ({ ...prev, language: value }))}
             showLabel={false}
           />
         </div>

@@ -28,7 +28,7 @@ import { hasOperationPermission } from '@/lib/permissions';
 interface KnowledgeListProps {
   initialCategories: KnowledgeCategory[];
   initialItems: KnowledgeItem[];
-  initialLanguages: string[];
+  initialLanguages: string[]; // 用于筛选器（动态从数据库获取）
 }
 
 export function KnowledgeList({ initialCategories, initialItems, initialLanguages }: KnowledgeListProps) {
